@@ -395,7 +395,7 @@ cmake --build build --config Release -j$(nproc)
 ```
 
 KV Cache 内存计算：
-```
+```text
 KV Cache 大小 = 2 × layers × seq_len × hidden_dim × bytes_per_param
 以 7B Q4_K_M，4096 上下文为例：
 = 2 × 32 × 4096 × 4096 × 2(F16) ≈ 2.1 GB
@@ -682,4 +682,4 @@ llama-cli 参数速查：
 
 ---
 
-上一篇：《10-AI Agent与RAG应用开发.md》
+上一篇：《10-AI Agent与RAG应用开发.md》　｜　模块索引：《../README.md》

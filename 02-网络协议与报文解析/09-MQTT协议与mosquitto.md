@@ -527,5 +527,4 @@ QoS2: PUBLISH -> PUBREC -> PUBREL -> PUBCOMP
 
 ---
 
-上一篇：《08-抓包分析与手写报文解析.md》
-下一篇：《10-RTMP推流协议.md》
+上一篇：《08-抓包分析与手写报文解析.md》　｜　下一篇：《10-RTMP推流协议.md》　｜　模块索引：《README.md》

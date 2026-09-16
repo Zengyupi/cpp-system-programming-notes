@@ -18,8 +18,9 @@
   - [9.3 编译选项](#93-编译选项)
 - [10. 基准对比：Python vs C++ vs pybind11](#10-基准对比python-vs-c-vs-pybind11)
 - [11. 决策原则：什么下沉 C++，什么留 Python](#11-决策原则什么下沉-c什么留-python)
-- [12. 常见坑](#12-常见坑)
-- [13. 本节小结](#13-本节小结)
+- [12. 快速参考卡片](#12-快速参考卡片)
+- [13. 常见坑](#13-常见坑)
+- [14. 本节小结](#14-本节小结)
 
 ---
 
@@ -710,7 +711,24 @@ uint32_t crc32_bytes(py::bytes data) {
 4. 保持绑定层尽量薄，不要在绑定层写业务逻辑。
 5. C++ 端的接口设计成接受原始指针/缓冲区（`py::buffer`），避免 STL 容器的拷贝开销。
 
-## 12. 常见坑
+## 12. 快速参考卡片
+
+| 需求 | 做法 |
+| --- | --- |
+| 模块骨架 | `PYBIND11_MODULE(_core, m) { m.def("add", &add); }` |
+| 暴露类 | `py::class_<Point>(m, "Point").def(py::init<int, int>()).def_readwrite("x", &Point::x)` |
+| STL 互转 | `<pybind11/stl.h>`：`std::vector` ↔ list、`std::map` ↔ dict（需包含头文件） |
+| 智能指针 | `std::shared_ptr<T>` 自动映射；`py::return_value_policy::take_ownership` 转移所有权 |
+| 释放 GIL | `py::call_guard<py::gil_scoped_release>()` 包重计算，让其它 Python 线程跑 |
+| 异常映射 | `py::register_exception<MyErr>(m, "MyError")`；C++ 异常不能穿越未映射边界 |
+| 构建集成 | `setup.py` + `Pybind11Extension`，或 CMake `find_package(pybind11)` + `pybind11_add_module` |
+| 类型转换成本 | 大容器按值传会有拷贝；`py::array_t<T>`（buffer 协议）实现零拷贝对接 numpy |
+| 调试 | `python -X faulthandler`；`.so` 用 `ldd` 查依赖；`nm -D` 看导出符号 |
+| 常见坑点 | 返回局部对象引用导致悬垂；忘了 `<pybind11/stl.h>` 报类型不识别的长模板错误 |
+
+---
+
+## 13. 常见坑
 
 **坑 1：GIL 导致 C++ 多线程无效。** Python 的全局解释器锁（GIL）在调用 C++ 函数时仍然持有。如果 C++ 函数内部用多线程并行计算，Python 端的其他线程无法运行。解决方案：在 C++ 函数入口释放 GIL：
 
@@ -738,7 +756,7 @@ m.def("heavy_compute", [](const std::vector<double>& data) {
 
 **坑 8：忘记 `#include <pybind11/stl.h>`。** 不包含这个头文件时，`std::vector`/`std::map` 等无法自动转换，编译报错或运行时类型错误。需要 `std::optional` 还要 `#include <pybind11/stl.h>`（已包含），`std::variant` 需要 `#include <pybind11/stl.h>`。
 
-## 13. 本节小结
+## 14. 本节小结
 
 - pybind11 是 C++/Python 混合编程的事实标准，纯头文件库，用 `PYBIND11_MODULE` 宏注册符号。
 - 标准工程用 CMake + `pybind11_add_module`，C++ 核心代码编为静态库，绑定模块链接它。
@@ -753,5 +771,4 @@ m.def("heavy_compute", [](const std::vector<double>& data) {
 
 ---
 
-上一篇：《01-ctypes与cffi调用原生库.md》
-下一篇：《03-PyO3打通Rust与三语言分工.md》
+上一篇：《01-ctypes与cffi调用原生库.md》　｜　下一篇：《03-PyO3打通Rust与三语言分工.md》　｜　模块索引：《../README.md》

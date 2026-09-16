@@ -703,5 +703,4 @@ XSLT：模板匹配 + for-each + value-of，XML转HTML/文本/XML
 
 ---
 
-上一篇：《04-JSON数据格式与解析.md》
-下一篇：《06-Redis深入：协议存储与集群.md》
+上一篇：《04-JSON数据格式与解析.md》　｜　下一篇：《06-Redis深入：协议与存储原理.md》　｜　模块索引：《../README.md》

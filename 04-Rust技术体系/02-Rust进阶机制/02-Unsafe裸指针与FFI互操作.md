@@ -1,44 +1,46 @@
-# Unsafe裸指针与FFI互操作
+# Unsafe 裸指针与 FFI 互操作
 
-> 本节目标：掌握unsafe的五种能力边界、裸指针操作、union与transmute、extern "C" ABI、C库调用完整实战、bindgen/cbindgen工具链、cxx与C++互操作、static mut的安全替代，以及封装unsafe为安全API的设计原则。
+> 本节目标：掌握 unsafe 的五种能力边界、裸指针操作、union 与 transmute、extern "C" ABI、C 库调用完整实战、bindgen/cbindgen 工具链、cxx 与 C++互操作、static mut 的安全替代，以及封装 unsafe 为安全 API 的设计原则。
 
 ## 本章速览
 
-- [1. unsafe的五种能力边界](#1-unsafe的五种能力边界)
+- [1. unsafe 的五种能力边界](#1-unsafe-的五种能力边界)
   - [1.1 解引用裸指针](#11-解引用裸指针)
-  - [1.2 调用unsafe函数或方法](#12-调用unsafe函数或方法)
-  - [1.3 访问或修改static mut变量](#13-访问或修改static-mut变量)
-  - [1.4 实现unsafe trait](#14-实现unsafe-trait)
-  - [1.5 访问union的字段](#15-访问union的字段)
+  - [1.2 调用 unsafe 函数或方法](#12-调用-unsafe-函数或方法)
+  - [1.3 访问或修改 static mut 变量](#13-访问或修改-static-mut-变量)
+  - [1.4 实现 unsafe trait](#14-实现-unsafe-trait)
+  - [1.5 访问 union 的字段](#15-访问-union-的字段)
 - [2. 裸指针*const/*mut](#2-裸指针constmut)
   - [2.1 创建与转换](#21-创建与转换)
   - [2.2 裸指针的算术运算](#22-裸指针的算术运算)
-  - [2.3 对照C++指针](#23-对照c指针)
-- [3. as转换与transmute](#3-as转换与transmute)
-  - [3.1 as指针转换](#31-as指针转换)
-  - [3.2 transmute的风险与替代](#32-transmute的风险与替代)
-- [4. union类型](#4-union类型)
-- [5. extern "C" ABI与C库调用实战](#5-extern-c-abi与c库调用实战)
+  - [2.3 对照 C++指针](#23-对照-c指针)
+- [3. as 转换与 transmute](#3-as-转换与-transmute)
+  - [3.1 as 指针转换](#31-as-指针转换)
+  - [3.2 transmute 的风险与替代](#32-transmute-的风险与替代)
+- [4. union 类型](#4-union-类型)
+- [5. extern "C" ABI 与 C 库调用实战](#5-extern-c-abi-与-c-库调用实战)
   - [5.1 声明外部函数](#51-声明外部函数)
-  - [5.2 完整实战：封装libc的mmap](#52-完整实战封装libc的mmap)
-  - [5.3 字符串与CString](#53-字符串与cstring)
-- [6. bindgen与cbindgen工具链](#6-bindgen与cbindgen工具链)
-  - [6.1 bindgen：C头文件生成Rust绑定](#61-bindgenc头文件生成rust绑定)
-  - [6.2 cbindgen：Rust生成C头文件](#62-cbindgenrust生成c头文件)
-- [7. cxx与C++互操作](#7-cxx与c互操作)
-- [8. static mut的安全替代](#8-static-mut的安全替代)
-- [9. 封装unsafe为安全API的原则](#9-封装unsafe为安全api的原则)
-  - [原则1：最小unsafe范围](#原则1最小unsafe范围)
-  - [原则2：在安全边界验证前置条件](#原则2在安全边界验证前置条件)
-  - [原则3：用类型系统维护不变量](#原则3用类型系统维护不变量)
-  - [原则4：文档化安全要求](#原则4文档化安全要求)
-- [10. 本节小结](#10-本节小结)
+  - [5.2 完整实战：封装 libc 的 mmap](#52-完整实战封装-libc-的-mmap)
+  - [5.3 字符串与 CString](#53-字符串与-cstring)
+- [6. bindgen 与 cbindgen 工具链](#6-bindgen-与-cbindgen-工具链)
+  - [6.1 bindgen：C 头文件生成 Rust 绑定](#61-bindgenc-头文件生成-rust-绑定)
+  - [6.2 cbindgen：Rust 生成 C 头文件](#62-cbindgenrust-生成-c-头文件)
+- [7. cxx 与 C++互操作](#7-cxx-与-c互操作)
+- [8. static mut 的安全替代](#8-static-mut-的安全替代)
+- [9. 封装 unsafe 为安全 API 的原则](#9-封装-unsafe-为安全-api-的原则)
+  - [原则 1：最小 unsafe 范围](#原则-1最小-unsafe-范围)
+  - [原则 2：在安全边界验证前置条件](#原则-2在安全边界验证前置条件)
+  - [原则 3：用类型系统维护不变量](#原则-3用类型系统维护不变量)
+  - [原则 4：文档化安全要求](#原则-4文档化安全要求)
+- [10. 快速参考卡片](#10-快速参考卡片)
+- [11. 常见坑](#11-常见坑)
+- [12. 本节小结](#12-本节小结)
 
 ---
 
-## 1. unsafe的五种能力边界
+## 1. unsafe 的五种能力边界
 
-`unsafe`关键字不是"关闭安全检查"的开关，而是一个**能力声明**：在`unsafe`块中，程序员承诺自己维护Rust安全不变量，编译器信任这个承诺。unsafe只解锁五种特定能力。
+`unsafe` 关键字不是"关闭安全检查"的开关，而是一个**能力声明**：在 `unsafe` 块中，程序员承诺自己维护 Rust 安全不变量，编译器信任这个承诺。unsafe 只解锁五种特定能力。
 
 ### 1.1 解引用裸指针
 
@@ -55,7 +57,7 @@ unsafe {
 }
 ```
 
-### 1.2 调用unsafe函数或方法
+### 1.2 调用 unsafe 函数或方法
 
 ```rust
 // 声明一个unsafe函数
@@ -73,9 +75,9 @@ fn main() {
 }
 ```
 
-标准库中大量函数是unsafe的，例如`Vec::set_len`、`str::from_utf8_unchecked`、`slice::from_raw_parts`。
+标准库中大量函数是 unsafe 的，例如 `Vec::set_len`、`str::from_utf8_unchecked`、`slice::from_raw_parts`。
 
-### 1.3 访问或修改static mut变量
+### 1.3 访问或修改 static mut 变量
 
 ```rust
 static mut COUNTER: i32 = 0;
@@ -88,9 +90,9 @@ fn main() {
 }
 ```
 
-`static mut`是Rust中最容易被滥用的特性之一，因为它本质上是一个全局可变变量，存在数据竞争风险。详见第8节的安全替代方案。
+`static mut` 是 Rust 中最容易被滥用的特性之一，因为它本质上是一个全局可变变量，存在数据竞争风险。详见第 8 节的安全替代方案。
 
-### 1.4 实现unsafe trait
+### 1.4 实现 unsafe trait
 
 ```rust
 // 声明一个unsafe trait：实现者必须承诺某些不变量
@@ -104,9 +106,9 @@ struct MyType;
 unsafe impl MySafeMarker for MyType {}
 ```
 
-标准库中的`Send`和`Sync`是unsafe trait（自动trait），手动实现它们需要unsafe，因为编译器无法验证类型确实是线程安全的。
+标准库中的 `Send` 和 `Sync` 是 unsafe trait（自动 trait），手动实现它们需要 unsafe，因为编译器无法验证类型确实是线程安全的。
 
-### 1.5 访问union的字段
+### 1.5 访问 union 的字段
 
 ```rust
 union MyUnion {
@@ -125,11 +127,11 @@ fn main() {
 }
 ```
 
-对照C++：C++中`union`的字段访问不需要任何特殊标记，类型双关（type punning）在C++中是未定义行为但编译器通常不报错。Rust把这种风险显式标记为unsafe，提醒程序员这里需要额外小心。
+对照 C++：C++中 `union` 的字段访问不需要任何特殊标记，类型双关（type punning）在 C++中是未定义行为但编译器通常不报错。Rust 把这种风险显式标记为 unsafe，提醒程序员这里需要额外小心。
 
 ## 2. 裸指针*const/*mut
 
-裸指针是Rust中最接近C指针的类型，不受借用检查器约束。
+裸指针是 Rust 中最接近 C 指针的类型，不受借用检查器约束。
 
 ### 2.1 创建与转换
 
@@ -175,9 +177,9 @@ unsafe {
 }
 ```
 
-### 2.3 对照C++指针
+### 2.3 对照 C++指针
 
-| 操作 | Rust裸指针 | C++原始指针 |
+| 操作 | Rust 裸指针 | C++原始指针 |
 |------|-----------|-------------|
 | 解引用 | `unsafe { *ptr }` | `*ptr` |
 | 空指针 | `std::ptr::null()` / `null_mut()` | `nullptr` |
@@ -186,11 +188,11 @@ unsafe {
 | 指针转引用 | `unsafe { &*ptr }` | `*ptr`（直接用） |
 | 引用转指针 | `&x as *const T` | `&x` |
 
-关键区别：Rust的引用（`&T`/`&mut T`）有编译器强制的别名规则和生命周期，裸指针（`*const T`/`*mut T`）没有。从裸指针创建引用时，程序员必须保证引用的有效性和别名规则。
+关键区别：Rust 的引用（`&T`/`&mut T`）有编译器强制的别名规则和生命周期，裸指针（`*const T`/`*mut T`）没有。从裸指针创建引用时，程序员必须保证引用的有效性和别名规则。
 
-## 3. as转换与transmute
+## 3. as 转换与 transmute
 
-### 3.1 as指针转换
+### 3.1 as 指针转换
 
 ```rust
 // 数值与指针之间的转换
@@ -208,9 +210,9 @@ unsafe {
 }
 ```
 
-### 3.2 transmute的风险与替代
+### 3.2 transmute 的风险与替代
 
-`std::mem::transmute`是Rust中最强大的类型转换工具，它直接把一种类型的位模式重新解释为另一种类型。
+`std::mem::transmute` 是 Rust 中最强大的类型转换工具，它直接把一种类型的位模式重新解释为另一种类型。
 
 ```rust
 use std::mem;
@@ -228,10 +230,10 @@ unsafe {
 }
 ```
 
-**transmute的风险**：
+**transmute 的风险**：
 1. 尺寸不匹配会编译错误，但语义不匹配不会
 2. 可以把任意类型转成任意类型，包括不相关的类型
-3. 违反类型不变量（例如把`0`转成`&'static T`）
+3. 违反类型不变量（例如把 `0` 转成 `&'static T`）
 
 **优先使用的安全替代**：
 
@@ -249,11 +251,11 @@ let ptr = &x as *const i32;
 let reference = unsafe { &*ptr }; // 只有这一步需要unsafe
 ```
 
-对照C++：`transmute`等价于C++的`reinterpret_cast`，但C++的`reinterpret_cast`可以在任何地方使用，不需要标记unsafe。Rust要求显式的unsafe块，让代码审查者能快速定位风险点。
+对照 C++：`transmute` 等价于 C++的 `reinterpret_cast`，但 C++的 `reinterpret_cast` 可以在任何地方使用，不需要标记 unsafe。Rust 要求显式的 unsafe 块，让代码审查者能快速定位风险点。
 
-## 4. union类型
+## 4. union 类型
 
-Rust的union与C的union语义相同：所有字段共享同一块内存。
+Rust 的 union 与 C 的 union 语义相同：所有字段共享同一块内存。
 
 ```rust
 #[repr(C)]
@@ -282,9 +284,9 @@ fn main() {
 }
 ```
 
-`#[repr(C)]`保证union的内存布局与C兼容，这在FFI中至关重要。没有`#[repr(C)]`的union使用Rust默认布局，不保证与C兼容。
+`#[repr(C)]` 保证 union 的内存布局与 C 兼容，这在 FFI 中至关重要。没有 `#[repr(C)]` 的 union 使用 Rust 默认布局，不保证与 C 兼容。
 
-## 5. extern "C" ABI与C库调用实战
+## 5. extern "C" ABI 与 C 库调用实战
 
 ### 5.1 声明外部函数
 
@@ -309,11 +311,11 @@ fn main() {
 }
 ```
 
-`extern "C"`指定使用C的调用约定（ABI）。Rust默认的ABI是`"Rust"`，不保证与C兼容。其他可用的ABI包括`"C-unwind"`、`"system"`、`"stdcall"`（Windows）等。
+`extern "C"` 指定使用 C 的调用约定（ABI）。Rust 默认的 ABI 是 `"Rust"`，不保证与 C 兼容。其他可用的 ABI 包括 `"C-unwind"`、`"system"`、`"stdcall"`（Windows）等。
 
-### 5.2 完整实战：封装libc的mmap
+### 5.2 完整实战：封装 libc 的 mmap
 
-下面是一个完整的、安全的mmap封装示例：
+下面是一个完整的、安全的 mmap 封装示例：
 
 ```rust
 use std::ffi::c_void;
@@ -405,11 +407,11 @@ fn main() {
 }
 ```
 
-这个封装展示了核心原则：**unsafe的能力被限制在最小范围内，对外暴露的API是完全安全的**。用户不需要知道内部使用了mmap，只需要像使用普通`Vec<u8>`一样使用`Mmap`。
+这个封装展示了核心原则：**unsafe 的能力被限制在最小范围内，对外暴露的 API 是完全安全的**。用户不需要知道内部使用了 mmap，只需要像使用普通 `Vec<u8>` 一样使用 `Mmap`。
 
-### 5.3 字符串与CString
+### 5.3 字符串与 CString
 
-Rust的`&str`和C的`const char*`有本质区别：Rust字符串不是以`\0`结尾的，而是带长度的。
+Rust 的 `&str` 和 C 的 `const char*` 有本质区别：Rust 字符串不是以 `\0` 结尾的，而是带长度的。
 
 ```rust
 use std::ffi::{CStr, CString};
@@ -435,13 +437,13 @@ fn main() {
 }
 ```
 
-`CString::new`会检查字符串中是否包含内部`\0`（这对C字符串是非法的），返回`Result`。如果确定没有内部`\0`，可以使用`CString::new("...").unwrap()`或`CString::from_vec_with_nul`。
+`CString::new` 会检查字符串中是否包含内部 `\0`（这对 C 字符串是非法的），返回 `Result`。如果确定没有内部 `\0`，可以使用 `CString::new("...").unwrap()` 或 `CString::from_vec_with_nul`。
 
-## 6. bindgen与cbindgen工具链
+## 6. bindgen 与 cbindgen 工具链
 
-### 6.1 bindgen：C头文件生成Rust绑定
+### 6.1 bindgen：C 头文件生成 Rust 绑定
 
-bindgen自动从C头文件生成Rust的`extern "C"`声明，避免手动翻译出错。
+bindgen 自动从 C 头文件生成 Rust 的 `extern "C"` 声明，避免手动翻译出错。
 
 ```bash
 # 安装bindgen
@@ -451,7 +453,7 @@ cargo install bindgen-cli
 bindgen wrapper.h -o bindings.rs
 ```
 
-`wrapper.h`包含需要生成绑定的头文件：
+`wrapper.h` 包含需要生成绑定的头文件：
 
 ```c
 #include <stdio.h>
@@ -459,7 +461,7 @@ bindgen wrapper.h -o bindings.rs
 #include <sys/mman.h>
 ```
 
-在`build.rs`中集成bindgen（以crates.io最新稳定版为准）：
+在 `build.rs` 中集成 bindgen（以 crates.io 最新稳定版为准）：
 
 ```rust
 // build.rs
@@ -479,16 +481,16 @@ fn main() {
 }
 ```
 
-### 6.2 cbindgen：Rust生成C头文件
+### 6.2 cbindgen：Rust 生成 C 头文件
 
-当Rust库需要被C代码调用时，cbindgen从Rust的`pub extern "C"`函数生成C头文件。
+当 Rust 库需要被 C 代码调用时，cbindgen 从 Rust 的 `pub extern "C"` 函数生成 C 头文件。
 
 ```bash
 cargo install cbindgen
 cbindgen --config cbindgen.toml --crate my_rust_lib --output my_rust_lib.h
 ```
 
-Rust侧的导出函数：
+Rust 侧的导出函数：
 
 ```rust
 #[no_mangle]
@@ -506,9 +508,9 @@ pub extern "C" fn rust_process(data: *const u8, len: usize) -> i32 {
 }
 ```
 
-## 7. cxx与C++互操作
+## 7. cxx 与 C++互操作
 
-对于C++互操作，`cxx`库（以crates.io最新稳定版为准）提供了比原始`extern "C"`更安全、更符合C++语义的绑定方式。
+对于 C++互操作，`cxx` 库（以 crates.io 最新稳定版为准）提供了比原始 `extern "C"` 更安全、更符合 C++语义的绑定方式。
 
 ```rust
 // Rust侧
@@ -535,17 +537,17 @@ fn rust_callback(value: i32) {
 }
 ```
 
-cxx的优势：
-- 支持C++的`std::string`、`std::vector`、`std::unique_ptr`等标准类型
-- 支持C++类和方法（通过`UniquePtr<T>`或`&T`）
-- 自动生成C++侧的绑定代码
+cxx 的优势：
+- 支持 C++的 `std::string`、`std::vector`、`std::unique_ptr` 等标准类型
+- 支持 C++类和方法（通过 `UniquePtr<T>` 或 `&T`）
+- 自动生成 C++侧的绑定代码
 - 类型安全：不需要手动处理裸指针
 
-对照C++：C++调用Rust通常需要通过`extern "C"`函数指针回调，cxx把这种模式封装成了类型安全的接口。
+对照 C++：C++调用 Rust 通常需要通过 `extern "C"` 函数指针回调，cxx 把这种模式封装成了类型安全的接口。
 
-## 8. static mut的安全替代
+## 8. static mut 的安全替代
 
-`static mut`是Rust中最危险的特性之一，因为它本质上是一个全局可变变量，在多线程环境下存在数据竞争。
+`static mut` 是 Rust 中最危险的特性之一，因为它本质上是一个全局可变变量，在多线程环境下存在数据竞争。
 
 ```rust
 // 不推荐：static mut
@@ -583,16 +585,16 @@ fn thread_increment() {
 
 | 方案 | 适用场景 | 线程安全 |
 |------|----------|----------|
-| `static mut` | 几乎不推荐 | 否，需要unsafe |
+| `static mut` | 几乎不推荐 | 否，需要 unsafe |
 | `Atomic*` | 简单数值/布尔 | 是，无锁 |
 | `OnceLock<Mutex<T>>` | 复杂全局状态 | 是，有锁 |
 | `thread_local!` | 线程独立状态 | 是，无共享 |
 
-## 9. 封装unsafe为安全API的原则
+## 9. 封装 unsafe 为安全 API 的原则
 
-封装unsafe代码时，遵循以下原则：
+封装 unsafe 代码时，遵循以下原则：
 
-### 原则1：最小unsafe范围
+### 原则 1：最小 unsafe 范围
 
 ```rust
 // 好：unsafe只包裹真正需要的操作
@@ -613,7 +615,7 @@ pub unsafe fn unsafe_function(data: &[u8]) -> &[u8] {
 }
 ```
 
-### 原则2：在安全边界验证前置条件
+### 原则 2：在安全边界验证前置条件
 
 ```rust
 pub fn from_raw_parts_safe<T>(ptr: *const T, len: usize) -> Option<&'static [T]> {
@@ -626,7 +628,7 @@ pub fn from_raw_parts_safe<T>(ptr: *const T, len: usize) -> Option<&'static [T]>
 }
 ```
 
-### 原则3：用类型系统维护不变量
+### 原则 3：用类型系统维护不变量
 
 ```rust
 // 用类型标记保证指针非空
@@ -651,7 +653,7 @@ impl<T> NonNull<T> {
 // 标准库已经提供了std::ptr::NonNull
 ```
 
-### 原则4：文档化安全要求
+### 原则 4：文档化安全要求
 
 ```rust
 /// 从裸指针创建一个&'static str
@@ -669,19 +671,62 @@ pub unsafe fn from_raw_parts_str<'a>(ptr: *const u8, len: usize) -> &'a str {
 }
 ```
 
-对照C++：C++没有"安全API"和"不安全API"的区分，所有操作都需要程序员自己保证安全。Rust的unsafe封装模式相当于把C++中"隐含的安全约定"变成了"显式的类型系统约束+文档化的安全要求"。
+对照 C++：C++没有"安全 API"和"不安全 API"的区分，所有操作都需要程序员自己保证安全。Rust 的 unsafe 封装模式相当于把 C++中"隐含的安全约定"变成了"显式的类型系统约束+文档化的安全要求"。
 
-## 10. 本节小结
+## 10. 快速参考卡片
 
-- **unsafe的五种能力**：解引用裸指针、调用unsafe函数、访问static mut、实现unsafe trait、访问union字段。unsafe不是关闭安全检查，而是程序员承诺维护安全不变量。
-- **裸指针**`*const T`/`*mut T`不受借用检查器约束，创建是安全的，解引用需要unsafe。常用方法：`offset`/`add`/`read`/`write`/`is_null`。
-- **transmute**是最强的类型转换，等价于C++的`reinterpret_cast`，应优先使用`to_bits`/`from_bits`等安全替代。
-- **extern "C"**指定C ABI，声明外部函数需要unsafe调用。完整的mmap封装展示了"unsafe内部实现，安全外部API"的模式。
-- **bindgen**从C头文件生成Rust绑定，**cbindgen**从Rust生成C头文件，**cxx**提供类型安全的C++互操作。
-- **static mut**几乎不应使用，替代方案：`Atomic*`（简单值）、`OnceLock<Mutex<T>>`（复杂状态）、`thread_local!`（线程局部）。
-- 封装unsafe的四原则：最小unsafe范围、安全边界验证前置条件、用类型系统维护不变量、文档化安全要求。无锁数据结构是unsafe的主要应用场景，对照《../../01-C++技术体系/13-并发异步与组件/06-无锁编程基础.md》理解裸指针与CAS的配合。
+| 查询点 | 速答 |
+| --- | --- |
+| unsafe 五种能力 | 解引用裸指针、调用 unsafe fn、访问 `static mut`、实现 unsafe trait、访问 `union` 字段 |
+| unsafe 不做什么 | **不关闭借用检查**、不阻止数据竞争；它是"我来保证前置条件"的承诺 |
+| 裸指针转换 | `&T as *const T`、`&mut T as *mut T`、`ptr::addr_of!`（避免中间引用）；`as` 可在指针/整数间转 |
+| 安全读指针 | `ptr::read`（须对齐有效）、`ptr::read_unaligned`、`slice::from_raw_parts`（须合法长度） |
+| transmute 替代 | 优先 `as`/`to_bits`/`bytemuck::cast`；大小不同直接编译错误，语义错则 UB |
+| C 字符串 | `CString::new(s)`（内含 NUL 报错）→ `as_ptr()`；反向 `CStr::from_ptr(p).to_str()` |
+| 跨语言布局 | 导出/导入结构体必须 `#[repr(C)]`；枚举用 `#[repr(C)]` 或整数映射 |
+| panic 跨 FFI | UB；用 `catch_unwind` 包住或在 `extern "C"` 边界禁用 panic |
+| 服务 Rust 侧安全 | 最小 unsafe 范围 + 边界验证前置条件 + `/// # Safety` 文档 + 安全 API 封装 |
 
 ---
 
-上一篇：《01-生命周期深入与高阶类型.md》
-下一篇：《03-宏编程与编译期计算.md》
+## 11. 常见坑
+
+### 坑 1：把 `transmute` 当万能类型转换
+
+`transmute` 要求源和目标**大小相同且目标类型的所有位模式都合法**。把 `u8` 转 `bool`、把 `f32` 转 `u32` 位模式再用、把枚举转成非法判别值，都是未定义行为——编译器可能静默优化掉你的预期逻辑。优先用 `as`、`to_bits/from_bits`、`bytemuck`、`#[repr(u8)]` 显式映射。
+
+### 坑 2：直接读写 `static mut`
+
+`static mut` 的引用在任何多线程场景下都是数据竞争 UB，Rust 2024 edition 已禁止对其取引用。用 `AtomicUsize`/`AtomicPtr` 做无锁共享，或 `Mutex`/`OnceLock`/`RwLock` 做互斥共享。
+
+### 坑 3：`#[repr(C)]` 漏标
+
+Rust 默认布局允许编译器重排字段（做填充优化）。把结构体传给 C 或从 C 接收时，漏标 `#[repr(C)]` 会导致字段偏移错位、读到垃圾数据——而且往往只在特定编译版本才暴露。FFI 边界上的一切结构体、联合体、枚举都必须显式标注布局。
+
+### 坑 4：CString / CStr 的生命周期搞混
+
+`CString` 是所有者，`as_ptr()` 得到的指针只在 `CString` 存活期间有效；把指针存起来跨作用域使用就是悬垂。反向同理：`CStr::from_ptr` 不接管所有权，不能释放，也不能假设 UTF-8（用 `to_str()` 会做校验，`to_string_lossy()` 容忍非法字节）。
+
+### 坑 5：panic 穿透 FFI 边界
+
+在 `extern "C"` 函数中 panic 是 UB（C 侧没有展开机制）。所有导出函数都应以 `catch_unwind` 包裹，或在入口处做校验后返回错误码；`#[no_mangle]` 函数里调用可能 panic 的 Rust 代码尤其危险。
+
+### 坑 6：unsafe 块范围过大
+
+把整个函数体塞进一个 `unsafe {}` 会让"哪里依赖了未验证前提"变得不可读。正确做法：unsafe 只包住真正需要的那几行，块外用安全代码做前置条件校验，并在文档注释中写 `# Safety` 说明调用者需要保证什么。
+
+---
+
+## 12. 本节小结
+
+- **unsafe 的五种能力**：解引用裸指针、调用 unsafe 函数、访问 static mut、实现 unsafe trait、访问 union 字段。unsafe 不是关闭安全检查，而是程序员承诺维护安全不变量。
+- **裸指针**`*const T`/`*mut T` 不受借用检查器约束，创建是安全的，解引用需要 unsafe。常用方法：`offset`/`add`/`read`/`write`/`is_null`。
+- **transmute**是最强的类型转换，等价于 C++的 `reinterpret_cast`，应优先使用 `to_bits`/`from_bits` 等安全替代。
+- **extern "C"**指定 C ABI，声明外部函数需要 unsafe 调用。完整的 mmap 封装展示了"unsafe 内部实现，安全外部 API"的模式。
+- **bindgen**从 C 头文件生成 Rust 绑定，**cbindgen**从 Rust 生成 C 头文件，**cxx**提供类型安全的 C++互操作。
+- **static mut**几乎不应使用，替代方案：`Atomic*`（简单值）、`OnceLock<Mutex<T>>`（复杂状态）、`thread_local!`（线程局部）。
+- 封装 unsafe 的四原则：最小 unsafe 范围、安全边界验证前置条件、用类型系统维护不变量、文档化安全要求。无锁数据结构是 unsafe 的主要应用场景，对照《../../01-C++技术体系/13-并发异步与组件/06-无锁编程基础.md》理解裸指针与 CAS 的配合。
+
+---
+
+上一篇：《01-生命周期深入与高阶类型.md》　｜　下一篇：《03-宏编程与编译期计算.md》　｜　模块索引：《../README.md》

@@ -15,7 +15,7 @@
   - [2.2 前后端通信流程](#22-前后端通信流程)
 - [3. virtio 设备模型](#3-virtio-设备模型)
   - [3.1 setmem 与 vring 设置](#31-setmem-与-vring-设置)
-  - [3.2 GPA/GVA/HVA/HPA 地址转换](#32-gpgvahvahpa-地址转换)
+  - [3.2 GPA/GVA/HVA/HPA 地址转换](#32-gpagvahvahpa-地址转换)
 - [4. vhost 原理](#4-vhost-原理)
   - [4.1 vhost 与 qemu 通信协议](#41-vhost-与-qemu-通信协议)
   - [4.2 vhost/virtio 通信与 recvmsg](#42-vhostvirtio-通信与-recvmsg)
@@ -523,5 +523,4 @@ QEMU 启动参数：
 
 ---
 
-上一篇：《07-SPDK与NVMe用户态存储.md》
-下一篇：《09-IOCPWindows完成端口.md》
+上一篇：《07-SPDK与NVMe用户态存储.md》　｜　下一篇：《09-IOCPWindows完成端口.md》　｜　模块索引：《../README.md》

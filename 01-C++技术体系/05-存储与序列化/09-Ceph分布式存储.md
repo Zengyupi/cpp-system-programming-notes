@@ -645,5 +645,4 @@ ms_cluster_iface = eth1
 
 ---
 
-上一篇：《07-MySQL深入：事务锁与索引优化.md》
-下一篇：《09-FastDFS分布式文件系统.md》
+上一篇：《08-MySQL深入：事务锁与索引优化.md》　｜　下一篇：《10-FastDFS分布式文件系统.md》　｜　模块索引：《../README.md》

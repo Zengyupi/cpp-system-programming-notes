@@ -219,5 +219,4 @@ fd 计数（泄漏）：     lsof -p PID | wc -l   （等价 ls /proc/PID/fd | w
 
 ---
 
-上一篇：《07-curl网络调试.md》
-下一篇：《09-nc与telnet网络调试.md》
+上一篇：《07-curl网络调试.md》　｜　下一篇：《09-nc与telnet网络调试.md》　｜　模块索引：《../README.md》

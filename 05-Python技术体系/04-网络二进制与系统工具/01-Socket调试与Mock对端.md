@@ -15,8 +15,9 @@
 - [5. 端口探测与连通性检查](#5-端口探测与连通性检查)
 - [6. selectors 最小用法与 Reactor 对照](#6-selectors-最小用法与-reactor-对照)
   - [6.1 与 C++ Reactor 的对照](#61-与-c-reactor-的对照)
-- [7. 常见坑](#7-常见坑)
-- [8. 本节小结](#8-本节小结)
+- [7. 快速参考卡片](#7-快速参考卡片)
+- [8. 常见坑](#8-常见坑)
+- [9. 本节小结](#9-本节小结)
 
 ---
 
@@ -419,7 +420,24 @@ if __name__ == "__main__":
 
 更多 Reactor 原理参见《../../01-C++技术体系/03-网络编程/02-IO多路复用与Reactor模型.md》。
 
-## 7. 常见坑
+## 7. 快速参考卡片
+
+| 需求 | 做法 |
+| --- | --- |
+| TCP 客户端 | `s = socket.create_connection((host, port), timeout=3)` → `s.sendall(b"...")` → `s.recv(4096)` |
+| TCP 服务端 | `socket.socket()` + `bind` + `listen` + `accept`（或用 `socketserver.ThreadingTCPServer`） |
+| UDP | `socket.socket(AF_INET, SOCK_DGRAM)` + `sendto/recvfrom`（保留报文边界） |
+| 超时控制 | `s.settimeout(2)`（抛 `socket.timeout`）或 `select.select([s], [], [], 2)` |
+| 收发十六进制打印 | `print(data.hex(" "))` / `binascii.hexlify`；接收端可 `bytes.fromhex` |
+| 处理粘包 | 按长度字段循环读：`recv_exact(n)` 直到读满 |
+| Mock 对端 | 起一个假服务端回放固定响应；或用 `socketpair` 在同进程内造两端 |
+| 端口占用排查 | `ss -ltnp` / `lsof -i:8080`；Python 侧 `socket.bind` 报错即端口冲突 |
+| 并发 mock | `threading` 每连接一线程；协议复杂时用 `asyncio` |
+| 常见坑点 | `recv` 返回空 bytes 表示对端关闭（不是"还没数据"）；只调一次 `recv` 不保证收全 |
+
+---
+
+## 8. 常见坑
 
 **坑 1：`recv(n)` 以为一定收到 n 字节。** TCP 是流协议，`recv(1024)` 可能返回 1 字节也可能返回 1024 字节。必须按协议长度头循环读满。UDP 不存在这个问题，但会丢包。
 
@@ -433,7 +451,7 @@ if __name__ == "__main__":
 
 **坑 6：UDP 广播地址用错。** `255.255.255.255` 是受限广播，路由器不转发。跨网段发现要用子网广播地址（如 `192.168.1.255`），且必须 `setsockopt(SO_BROADCAST, 1)`。
 
-## 8. 本节小结
+## 9. 本节小结
 
 - Python `socket` 是 BSD Socket API 的薄封装，C++ 程序员零门槛，适合写联调小工具而非高性能服务。
 - TCP 调试核心是**循环读满 + 长度头切帧**；UDP 调试核心是**超时 + 广播开关**。
@@ -443,4 +461,4 @@ if __name__ == "__main__":
 
 ---
 
-下一篇：《02-HTTP联调与本地Mock服务.md》
+下一篇：《02-HTTP联调与本地Mock服务.md》　｜　模块索引：《../README.md》

@@ -18,13 +18,14 @@
 - [4. rust-analyzer 与 VSCode 配置](#4-rust-analyzer-与-vscode-配置)
 - [5. 第一个程序逐行讲解](#5-第一个程序逐行讲解)
 - [6. 对照 C++：Cargo vs Make / CMake](#6-对照-ccargo-vs-make--cmake)
-- [7. 常见坑与排错](#7-常见坑与排错)
+- [7. 快速参考卡片](#7-快速参考卡片)
+- [8. 常见坑与排错](#8-常见坑与排错)
   - [坑 1：Cargo.lock 是否提交？](#坑-1cargolock-是否提交)
   - [坑 2：依赖版本冲突](#坑-2依赖版本冲突)
   - [坑 3：编译慢](#坑-3编译慢)
   - [坑 4：nightly 特性在 stable 中不可用](#坑-4nightly-特性在-stable-中不可用)
   - [坑 5：`cargo run` 传参](#坑-5cargo-run-传参)
-- [8. 本节小结](#8-本节小结)
+- [9. 本节小结](#9-本节小结)
 
 ---
 
@@ -401,7 +402,24 @@ fn main() {
 
 > **核心差异**：C++ 的构建工具链是碎片化的（CMake/Make/Ninja/Bazel/Conan/vcpkg 各自为政），而 Cargo 是统一的、约定优于配置的。这使得 Rust 项目的上手成本远低于 C++ 项目——`git clone` 后 `cargo build` 几乎一定能成功，而 C++ 项目往往需要处理依赖安装、CMake 版本、编译器兼容性等一系列问题。
 
-## 7. 常见坑与排错
+## 7. 快速参考卡片
+
+| 需求 | 命令 |
+| --- | --- |
+| 安装/更新 | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh`；`rustup update` |
+| 切换工具链 | `rustup toolchain install nightly`；`rustup override set nightly` |
+| 组件 | `rustup component add rustfmt clippy rust-src` |
+| 新建项目 | `cargo new app`（bin）/ `cargo new --lib mylib` |
+| 构建运行 | `cargo build [--release]`；`cargo run`；`cargo check`（最快类型检查） |
+| 测试格式 | `cargo test`；`cargo fmt`；`cargo clippy -- -D warnings` |
+| 依赖管理 | `cargo add serde --features derive`；`cargo tree`；`cargo update` |
+| 文档 | `cargo doc --open`；`///`（项）/ `//!`（模块） |
+| 交叉编译 | `rustup target add x86_64-unknown-linux-musl`；`cargo build --target ...` |
+| 常见坑 | 未设 `edition` 默认为 2015；target/debug 与 release 混跑；新 shell 未 `source ~/.cargo/env` |
+
+---
+
+## 8. 常见坑与排错
 
 ### 坑 1：Cargo.lock 是否提交？
 
@@ -433,7 +451,7 @@ components = ["rust-src", "clippy", "rustfmt"]
 
 `cargo run -- arg1 arg2`，`--` 分隔 cargo 参数和程序参数。忘记 `--` 会导致参数被 cargo 解析而非传递给程序。
 
-## 8. 本节小结
+## 9. 本节小结
 
 - rustup 是 Rust 工具链管理器，支持 stable/beta/nightly 三通道和多 target 交叉编译，组件化管理 rust-src/rustfmt/clippy/miri。
 - Edition 机制允许同一编译器支持多语言版本，不同 edition 代码可互操作，解决了 C++ 标准升级的破坏性问题。
@@ -444,4 +462,4 @@ components = ["rust-src", "clippy", "rustfmt"]
 
 ---
 
-下一篇：《02-基础语法与类型系统.md》
+下一篇：《02-基础语法与类型系统.md》　｜　模块索引：《../README.md》

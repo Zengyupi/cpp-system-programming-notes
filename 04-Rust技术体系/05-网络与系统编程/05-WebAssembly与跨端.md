@@ -1,4 +1,4 @@
-# WebAssembly与跨端
+# WebAssembly 与跨端
 
 > 本节目标：掌握 Rust WebAssembly 技术栈的完整能力——从 wasm32 目标到 wasm-bindgen 互操作，从 trunk 构建到 WASI 服务端，从包体优化到典型跨端场景，建立 Rust 作为 WASM 首选语言的工程化认知。
 
@@ -25,7 +25,8 @@
 - [7. 典型跨端场景与限制](#7-典型跨端场景与限制)
   - [7.1 计算密集型前端、游戏引擎、插件系统](#71-计算密集型前端游戏引擎插件系统)
   - [7.2 当前限制与未来方向](#72-当前限制与未来方向)
-- [8. 常见坑与本节小结](#8-常见坑与本节小结)
+- [8. 快速参考卡片](#8-快速参考卡片)
+- [9. 常见坑与本节小结](#9-常见坑与本节小结)
   - [常见坑](#常见坑)
   - [本节小结](#本节小结)
 
@@ -813,7 +814,24 @@ WASM 的安全沙箱和跨平台特性使其成为插件系统的理想选择：
 
 C++ 对照：C++ 在 WASM 领域起步更早（Emscripten 自 2010 年），在游戏引擎移植（Unreal、Unity）和大型 C++ 应用移植方面有更多案例。Rust 的优势在于更现代的工具链、更小的包体积、更安全的互操作、以及与 WASI/wasmtime 的深度集成（wasmtime 本身是 Rust 项目）。两者不是竞争关系——C++ 适合将现有大型 C++ 代码库移植到浏览器，Rust 适合新的 WASM 项目和服务端 WASM 应用。
 
-## 8. 常见坑与本节小结
+## 8. 快速参考卡片
+
+| 查询点 | 速答 |
+| --- | --- |
+| 工具链 | `wasm-pack build --target web`（推荐）/ `wasm-bindgen-cli` 手工绑定 |
+| 目标平台 | `wasm32-unknown-unknown`（浏览器）/ `wasm32-wasi`（服务端，WASI 能力受限） |
+| 绑定导出 | `#[wasm_bindgen] pub fn add(a: i32, b: i32) -> i32`；结构体用 `#[wasm_bindgen(getter)]` |
+| 调用 JS | `js_sys`（Array/Object/Promise）、`web_sys`（DOM/Canvas/fetch） |
+| JS 互操作类型 | `JsValue`、`JsString`、`Closure`（回调需 `forget()` 或保存所有权） |
+| 异步互操作 | `wasm_bindgen_futures::JsFuture::from(promise).await` |
+| 体积优化 | `opt-level = "z"`、`lto = true`、`panic = "abort"`、`wasm-opt -Oz`、`strip` |
+| 线程与 SIMD | 需 `--target-features` + COOP/COEP 头；`wasm32-wasi-threads` 实验性 |
+| 跨端框架 | `Tauri`（桌面/移动，Web 前端 + Rust 后端）、`Yew`/`Leptos`（前端框架） |
+| 常见坑点 | 忘了 `wasm-opt` 或 debug 构建导致包体 MB 级；WASI 无文件系统/网络需显式能力授予 |
+
+---
+
+## 9. 常见坑与本节小结
 
 ### 常见坑
 
@@ -834,4 +852,4 @@ Rust 是 WebAssembly 的首选语言，其技术栈涵盖浏览器端和服务�
 
 ---
 
-上一篇：《04-操作系统与底层开发.md》
+上一篇：《04-操作系统与底层开发.md》　｜　模块索引：《../README.md》

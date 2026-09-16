@@ -289,5 +289,4 @@ JSON POST：           curl -s -X POST -H 'Content-Type: application/json' -d '{
 
 ---
 
-上一篇：《06-strace系统调用跟踪.md》
-下一篇：《08-lsof文件句柄排查.md》
+上一篇：《06-strace系统调用跟踪.md》　｜　下一篇：《08-lsof文件句柄排查.md》　｜　模块索引：《../README.md》

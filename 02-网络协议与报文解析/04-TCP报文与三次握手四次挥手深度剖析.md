@@ -226,7 +226,7 @@ tcpdump -i any -nn -S 'host 192.168.1.10 and tcp port 502'
 10:00:02.030 C > S Flags [.],  ack 3002
 ```
 
-Wireshark 里右键一条流 → Follow → TCP Stream 看完整请求/响应；Statistics → Flow Graph 看时序。过滤技巧见 07 篇与《../01-C++技术体系/08-网络与系统工具/02-tcpdump网络抓包.md》。
+Wireshark 里右键一条流 → Follow → TCP Stream 看完整请求/响应；Statistics → Flow Graph 看时序。过滤技巧见 08 篇与《../01-C++技术体系/08-网络与系统工具/02-tcpdump网络抓包.md》。
 
 ## 8. 快速参考卡片
 
@@ -263,5 +263,4 @@ Nagle+延迟ACK 可能卡40ms，低延迟场景 TCP_NODELAY
 
 ---
 
-上一篇：《03-IP-ARP-ICMP报文详解.md》
-下一篇：《05-UDP-DNS-DHCP报文.md》
+上一篇：《03-IP-ARP-ICMP报文详解.md》　｜　下一篇：《05-UDP-DNS-DHCP报文.md》　｜　模块索引：《README.md》

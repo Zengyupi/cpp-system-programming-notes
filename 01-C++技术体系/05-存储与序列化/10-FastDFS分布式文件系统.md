@@ -769,4 +769,4 @@ group1 / M00 / 00 / 00 / wKgBgV12345.jpg
 
 ---
 
-上一篇：《08-Ceph分布式存储.md》
+上一篇：《09-Ceph分布式存储.md》　｜　模块索引：《../README.md》

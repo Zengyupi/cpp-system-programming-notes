@@ -21,8 +21,9 @@
   - [8.1 GitHub Actions](#81-github-actions)
   - [8.2 GitLab CI](#82-gitlab-ci)
 - [9. 完整实战：版本发布自动化脚本](#9-完整实战版本发布自动化脚本)
-- [10. 常见坑与避坑指南](#10-常见坑与避坑指南)
-- [11. 本节小结](#11-本节小结)
+- [10. 快速参考卡片](#10-快速参考卡片)
+- [11. 常见坑与避坑指南](#11-常见坑与避坑指南)
+- [12. 本节小结](#12-本节小结)
 
 ---
 
@@ -1178,7 +1179,24 @@ if __name__ == "__main__":
     main()
 ```
 
-## 10. 常见坑与避坑指南
+## 10. 快速参考卡片
+
+| 需求 | 做法 |
+| --- | --- |
+| 调 git | `subprocess.run(["git", "status", "--porcelain"], check=True, text=True)` |
+| 批量多仓操作 | `pathlib` 找 `.git` 目录 → 逐个执行 `fetch/pull/status`，汇总结果 |
+| 拿提交信息 | `git log -1 --format=%H%n%an%n%s` 解析；`git describe --tags` |
+| 检查脏工作区 | `git status --porcelain` 非空即脏；CI 里作为门禁 |
+| 打标签/提交 | `git tag -a v1.0 -m "..."`、`git commit -m ...`（脚本里避免 `-i`/交互） |
+| pre-commit 钩子 | `.pre-commit-config.yaml` 或 `hooks/pre-commit` 脚本（`chmod +x`） |
+| CI 最小流程 | install → lint → build → test → artifact；失败早退 |
+| 缓存 | 缓存 build 目录/依赖（GitHub Actions `actions/cache`） |
+| 矩阵构建 | 多编译器/多 Python 版本矩阵并行 |
+| 常见坑点 | 脚本里 `git` 命令失败未检查返回码；CI 上 `git` 浅克隆导致 `describe` 拿不到 tag（需 `fetch-depth: 0`） |
+
+---
+
+## 11. 常见坑与避坑指南
 
 | 坑 | 现象 | 解决方案 |
 |---|---|---|
@@ -1192,7 +1210,7 @@ if __name__ == "__main__":
 | 多仓库操作状态混乱 | 一个仓库失败后后续状态不一致 | 每个仓库独立 try/except，记录成功/失败，最后汇总 |
 | release 脚本误操作 | dry-run 没开就执行了实际发布 | 默认 dry-run，加 `--execute` 才实际执行；关键操作前加确认提示 |
 
-## 11. 本节小结
+## 12. 本节小结
 
 - git 操作可以用 `subprocess.run`（简单可靠）或 GitPython（面向对象，复杂操作），CI 环境推荐 subprocess 避免额外依赖
 - 批量操作包括子模块更新、多仓库 fetch/pull/status，每个操作独立异常处理并记录结果
@@ -1209,4 +1227,4 @@ if __name__ == "__main__":
 
 ---
 
-上一篇：《04-调试与性能分析辅助.md》
+上一篇：《04-调试与性能分析辅助.md》　｜　模块索引：《../README.md》

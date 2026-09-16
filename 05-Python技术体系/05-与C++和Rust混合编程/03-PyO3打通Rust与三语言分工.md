@@ -16,8 +16,9 @@
 - [8. 对比 pybind11](#8-对比-pybind11)
 - [9. 三语言分工决策表](#9-三语言分工决策表)
 - [10. 完整示例：Rust 协议解析库的 Python 绑定](#10-完整示例rust-协议解析库的-python-绑定)
-- [11. 常见坑](#11-常见坑)
-- [12. 本节小结](#12-本节小结)
+- [11. 快速参考卡片](#11-快速参考卡片)
+- [12. 常见坑](#12-常见坑)
+- [13. 本节小结](#13-本节小结)
 
 ---
 
@@ -699,7 +700,24 @@ python test_proto.py
 
 这个示例展示了 PyO3 的完整工作流：`#[pyclass]` 定义类、`#[pymethods]` 绑定方法、`#[pyfunction]` 绑定函数、`PyResult` 错误处理、`allow_threads` 释放 GIL、`&[u8]` 零拷贝访问 bytes。
 
-## 11. 常见坑
+## 11. 快速参考卡片
+
+| 需求 | 做法 |
+| --- | --- |
+| 导出函数 | `#[pyfunction] fn add(a: i64, b: i64) -> i64` + `#[pymodule] fn m(m: &Bound<PyModule>)` |
+| 导出类 | `#[pyclass] struct Counter {...}` + `#[pymethods] impl Counter { #[new] fn new() -> Self; }` |
+| 类型映射 | Rust `Vec<i64>` ↔ list（有拷贝）；`&[u8]`/`PyBuffer` 走 buffer 协议零拷贝 |
+| 释放 GIL | `py.allow_threads(\|\| heavy_work())`（对应 pybind11 的 gil_scoped_release） |
+| 错误传递 | 返回 `PyResult<T>`，`?` 自动转 `PyErr`；自定义异常 `create_exception!` |
+| 构建 | `maturin develop --release`（开发）/ `maturin build`（出 wheel）；`pyproject.toml` 里 `[tool.maturin]` |
+| 与 pybind11 对比 | 无 C++ 依赖、编译更快、体积更小、构建链更简单（无需 CMake/编译器版本对齐） |
+| 三语言分工 | Rust 做性能核心/安全解析，C++ 复用存量库，Python 做胶水与工具（本项目主线） |
+| 性能要点 | `--release` 构建；减少跨边界调用次数（批量接口）；避免每次转换大容器 |
+| 常见坑点 | 用 debug 构建测性能；忘了 `allow_threads` 导致并行度为零；`#[pyclass]` 字段需 `pub` 或用 getter |
+
+---
+
+## 12. 常见坑
 
 **坑 1：`cdylib` 忘记设置。** `Cargo.toml` 中 `[lib] crate-type = ["cdylib"]` 必须设置，否则编译出的是 rlib，Python 无法加载。
 
@@ -717,7 +735,7 @@ python test_proto.py
 
 **坑 8：Windows 上 MSVC 版本不匹配。** Rust 的 MSVC 工具链必须与 Python 解释器使用的 MSVC 版本一致（通常是 Visual Studio 2019/2022）。用 `rustup show` 确认工具链，安装对应的 Build Tools。
 
-## 12. 本节小结
+## 13. 本节小结
 
 - PyO3 是 Rust 的 Python 绑定标准库，用过程宏 `#[pyfunction]`/`#[pyclass]`/`#[pymethods]` 标注符号，编译器自动生成绑定。
 - maturin 是构建工具，`maturin develop --release` 一条命令编译并安装到当前虚拟环境，替代了繁琐的 setup.py。
@@ -731,4 +749,4 @@ python test_proto.py
 
 ---
 
-上一篇：《02-pybind11封装C++模块.md》
+上一篇：《02-pybind11封装C++模块.md》　｜　模块索引：《../README.md》

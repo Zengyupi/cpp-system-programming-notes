@@ -13,8 +13,9 @@
 - [4. 本地 Mock 服务：标准库 http.server](#4-本地-mock-服务标准库-httpserver)
 - [5. 本地 Mock 服务：FastAPI 最小测试桩](#5-本地-mock-服务fastapi-最小测试桩)
 - [6. 抓包结果重放](#6-抓包结果重放)
-- [7. 常见坑](#7-常见坑)
-- [8. 本节小结](#8-本节小结)
+- [7. 快速参考卡片](#7-快速参考卡片)
+- [8. 常见坑](#8-常见坑)
+- [9. 本节小结](#9-本节小结)
 
 ---
 
@@ -353,7 +354,24 @@ if __name__ == "__main__":
 
 如果抓包是 pcapng 格式，可以用 `scapy`（以PyPI最新稳定版为准）解析提取 HTTP 载荷，但 scapy 依赖较重，简单场景直接 Wireshark 导出为文本更方便。
 
-## 7. 常见坑
+## 7. 快速参考卡片
+
+| 需求 | 做法 |
+| --- | --- |
+| 快速起 HTTP 服务 | `python -m http.server 8000`（静态文件）；`--directory dir` 指定根 |
+| 自定义 handler | 继承 `BaseHTTPRequestHandler`，实现 `do_GET/do_POST`，`self.wfile.write(body)` |
+| 路由分发 | 小规模字典路由；复杂用 `flask`/`fastapi`（`@app.post("/api")`） |
+| 请求侧 | `requests.get(url, timeout=3)`；`s.post(url, json={...})`；`r.raise_for_status()` |
+| 看原始报文 | `python -m http.server` 配 `tcpdump`/`curl -v`；或用 `http.client.HTTPConnection` 手控 |
+| 并发压测 | `ab -n 1000 -c 50` / `wrk`；Python 侧 `concurrent.futures` 并发请求 |
+| Mock 状态码 | 故意返回 4xx/5xx 验证客户端容错；慢响应测超时（`time.sleep`） |
+| 抓包对照 | 与 Wireshark/tshark 对照验证 Content-Length、分块传输 |
+| HTTPS 本地 | `ssl.wrap_socket` + 自签证书；客户端 `verify=False`（仅调试） |
+| 常见坑点 | 忘了设置 `Content-Length` 导致客户端一直等；服务端单线程阻塞（用 `ThreadingHTTPServer`） |
+
+---
+
+## 8. 常见坑
 
 **坑 1：不设超时。** `requests.get(url)` 默认无限等待，内部服务挂起时脚本直接卡死。永远传 `timeout`，建议 `timeout=(connect, read)` 分别设置。
 
@@ -367,7 +385,7 @@ if __name__ == "__main__":
 
 **坑 6：mock 服务端单线程阻塞。** 标准库 `HTTPServer` 是单线程的，如果 C++ 客户端发了一个请求但不读响应（或很慢），后续请求全部排队。改用 `ThreadingHTTPServer` 或 FastAPI。
 
-## 8. 本节小结
+## 9. 本节小结
 
 - `requests` 是同步 HTTP 客户端事实标准，`Session` 管理鉴权和连接池，`Retry` 做自动重试，`timeout` 必须显式设置。
 - `httpx` API 与 requests 兼容，额外支持异步和 HTTP/2，并发调用大量接口时用 `asyncio.gather`。
@@ -377,5 +395,4 @@ if __name__ == "__main__":
 
 ---
 
-上一篇：《01-Socket调试与Mock对端.md》
-下一篇：《03-二进制文件与格式解析.md》
+上一篇：《01-Socket调试与Mock对端.md》　｜　下一篇：《03-二进制文件与格式解析.md》　｜　模块索引：《../README.md》

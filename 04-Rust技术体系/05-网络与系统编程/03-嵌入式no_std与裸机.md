@@ -1,4 +1,4 @@
-# 嵌入式no_std与裸机
+# 嵌入式 no_std 与裸机
 
 > 本节目标：掌握 Rust 嵌入式开发的核心技术栈——从 std/alloc/core/no_std 分层到 cortex-m 启动，从 embedded-hal 抽象到 PAC/HAL 关系，从 defmt 日志到中断与临界区，建立可与 C 嵌入式开发对标的裸机编程能力。
 
@@ -20,7 +20,8 @@
   - [5.1 中断处理函数注册](#51-中断处理函数注册)
   - [5.2 Critical Section 与共享状态](#52-critical-section-与共享状态)
 - [6. 与 C 嵌入式开发对照](#6-与-c-嵌入式开发对照)
-- [7. 常见坑与本节小结](#7-常见坑与本节小结)
+- [7. 快速参考卡片](#7-快速参考卡片)
+- [8. 常见坑与本节小结](#8-常见坑与本节小结)
   - [常见坑](#常见坑)
   - [本节小结](#本节小结)
 
@@ -511,7 +512,23 @@ Rust 嵌入式与 C 嵌入式的核心差异对照（可交叉参考《../../01-
 
 核心优势总结：Rust 嵌入式在保留 C 的性能和底层控制能力的同时，通过类型系统、所有权、trait 抽象消除了 C 嵌入式中最常见的 bug 类别（内存错误、数据竞争、寄存器拼写错误）。`embedded-hal` 的平台无关驱动生态和 `defmt` 的高效日志是 C 生态缺乏的创新。目前 Rust 嵌入式的主要局限是：部分高端 MCU（如某些 DSP、RISC-V 变体）的 PAC/HAL 支持不如 C 成熟，以及调试工具链（如 ITM 追踪）的覆盖度。但对于主流的 Cortex-M 系列，Rust 已经具备生产级能力。
 
-## 7. 常见坑与本节小结
+## 7. 快速参考卡片
+
+| 查询点 | 速答 |
+| --- | --- |
+| no_std 起步 | `#![no_std] #![no_main]`；提供 `#[panic_handler]` 与入口符号 |
+| 为什么 no_std | 无操作系统/无 libc 环境；core（无堆）→ alloc（需分配器）→ std（需 OS） |
+| 目标三元组 | `thumbv7em-none-eabihf`（Cortex-M4F）等；`.cargo/config.toml` 固定 target 与 runner |
+| 启动流程 | `cortex-m-rt` 提供向量表与 reset handler；`#[entry] fn main() -> !` |
+| HAL 抽象 | `embedded-hal` trait（Spi/I2c/Gpio）+ 厂商 PAC（`stm32f4xx-hal`、`rp-pico`） |
+| 中断与临界区 | `#[interrupt]`、`cortex_m::interrupt::free(\|cs\| ...)`；RTOS 用 `rtic`/`embassy` |
+| 日志 | `defmt`（编译期格式化，二进制极小）+ `probe-rs` 直接读 RTT |
+| 调试链路 | `probe-rs run`/`gdb-multiarch` + OpenOCD；`panic-probe` 输出回溯 |
+| 常见坑点 | 忘 `#![no_main]` 或重复定义 panic_handler；`static mut` 访问（用 `critical_section` 或 `Mutex<RefCell>`）；忘了 `memory.x` 链接脚本 |
+
+---
+
+## 8. 常见坑与本节小结
 
 ### 常见坑
 
@@ -530,5 +547,4 @@ Rust 嵌入式开发以 `no_std` 为基础，通过 `core`/`alloc`/`std` 三层�
 
 ---
 
-上一篇：《02-HTTP服务与Web后端.md》
-下一篇：《04-操作系统与底层开发.md》
+上一篇：《02-HTTP服务与Web后端.md》　｜　下一篇：《04-操作系统与底层开发.md》　｜　模块索引：《../README.md》

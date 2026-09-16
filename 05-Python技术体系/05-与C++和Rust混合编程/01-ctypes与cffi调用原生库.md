@@ -16,8 +16,9 @@
 - [7. 内存管理责任边界](#7-内存管理责任边界)
 - [8. cffi：更严格的 C 外部函数接口](#8-cffi更严格的-c-外部函数接口)
 - [9. 完整示例：复用已编译的协议解析库](#9-完整示例复用已编译的协议解析库)
-- [10. 常见坑](#10-常见坑)
-- [11. 本节小结](#11-本节小结)
+- [10. 快速参考卡片](#10-快速参考卡片)
+- [11. 常见坑](#11-常见坑)
+- [12. 本节小结](#12-本节小结)
 
 ---
 
@@ -617,7 +618,24 @@ if __name__ == "__main__":
 
 这个示例展示了 ctypes 的典型用法：加载库 → 定义结构体 → 声明函数签名 → 写 Python 包装函数 → 批量处理。C 库负责协议解析的核心逻辑（已经过验证），Python 负责文件读取、批量调度、结果输出。
 
-## 10. 常见坑
+## 10. 快速参考卡片
+
+| 需求 | 做法 |
+| --- | --- |
+| 加载动态库 | `lib = ctypes.CDLL("./libfoo.so")`（`CDLL` 用 cdecl；Windows 用 `WinDLL`） |
+| 声明签名 | `lib.add.argtypes = [c_int, c_int]`；`lib.add.restype = c_int`（必须设，否则默认 int 截断） |
+| 指针/数组 | `ctypes.c_int * 4` 建数组；`byref(x)`、`pointer(x)` 传地址 |
+| 结构体 | `class P(ctypes.Structure): _fields_ = [("x", c_int)]`（与 C 侧 `#pragma pack` 对齐一致） |
+| 字符串 | `c_char_p`（只读）、`create_string_buffer(b"abc", 64)`（可写缓冲区） |
+| 回调 | `CFUNCTYPE(None, c_int)` 包装 Python 函数；注意被 GC 回收导致崩溃 |
+| cffi 选型 | `ffi.cdef()` + `ffi.dlopen()`（ABI 模式）；API 模式可编译绑定，更快更安全 |
+| 构建绑定 | `setuptools` 编译扩展或 `cffi` 的 `set_source` + `verify`（已弃用则用 API 模式） |
+| GIL 注意 | ctypes 调用默认释放 GIL？——**不会**（除非库自己释放）；长计算会阻塞 Python 线程 |
+| 常见坑点 | 忘记 `argtypes` 导致 64 位指针被截成 32 位；结构体对齐不一致；回调对象须持有引用 |
+
+---
+
+## 11. 常见坑
 
 **坑 1：不声明 `argtypes`/`restype`。** 不声明时 ctypes 做默认转换，浮点数会当整数传（导致值错误），指针类型推断错误（段错误）。必须显式声明。
 
@@ -635,7 +653,7 @@ if __name__ == "__main__":
 
 **坑 8：64 位指针当 32 位整数处理。** `c_void_p` 在 64 位系统上是 8 字节，如果函数签名写成 `c_int`（4 字节），指针会被截断导致段错误。指针一律用 `c_void_p` 或 `POINTER(类型)`。
 
-## 11. 本节小结
+## 12. 本节小结
 
 - ctypes 是 Python 标准库，零依赖，适合快速调用已编译的 C 库。只能调用 C ABI，C++ 函数需要 `extern "C"` 包装或用 pybind11。
 - 必须显式声明 `argtypes` 和 `restype`，避免默认转换导致的类型错误。
@@ -650,4 +668,4 @@ Rust 库的 FFI 互操作原理与 C 类似（Rust 也支持 `extern "C"` 导出
 
 ---
 
-下一篇：《02-pybind11封装C++模块.md》
+下一篇：《02-pybind11封装C++模块.md》　｜　模块索引：《../README.md》

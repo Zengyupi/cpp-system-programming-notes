@@ -578,5 +578,4 @@ KV:     put KEY VAL / get KEY [--prefix] / del KEY [--prefix]
 
 ---
 
-上一篇：《07-ZeroMQ消息模式.md》
-下一篇：《09-OpenResty与WAF防护.md》
+上一篇：《07-ZeroMQ消息模式.md》　｜　下一篇：《09-OpenResty与WAF防护.md》　｜　模块索引：《../README.md》

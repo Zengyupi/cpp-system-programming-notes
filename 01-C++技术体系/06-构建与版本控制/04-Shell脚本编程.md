@@ -1200,5 +1200,4 @@ bash -n script.sh
 
 ---
 
-上一篇：《03-Git版本控制.md》
-下一篇：《05-Python脚本与自动化.md》
+上一篇：《03-Git版本控制.md》　｜　模块索引：《../README.md》

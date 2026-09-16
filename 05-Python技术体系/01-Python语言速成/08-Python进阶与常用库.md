@@ -1,6 +1,6 @@
 # Python 进阶与常用库（中高级实战）
 
-> 本节目标：面向已掌握 Python 基础脚本编写的学习者，深入讲解日常中大型工程中反复用到的中高级机制与高频库，包括数据模型/魔术方法、迭代器与生成器、装饰器、描述符与 OO 进阶、类型注解、collections/functools/itertools、并发进阶（线程/进程/协程）、Pythonic 写法与性能优化，以及按场景分类的常用第三方库。学完后能够在工程实践中运用 Python 中高级特性写出高效、可维护的代码。环境搭建、虚拟环境、subprocess、struct 协议解析与 C++ 互调见《05-Python脚本与自动化.md》，本文不重复。对照 C++ 理解：装饰器≈编译期/运行期包装、描述符≈受控成员、生成器≈可暂停的协程式迭代器、上下文管理器≈RAII。
+> 本节目标：面向已掌握 Python 基础脚本编写的学习者，深入讲解日常中大型工程中反复用到的中高级机制与高频库，包括数据模型/魔术方法、迭代器与生成器、装饰器、描述符与 OO 进阶、类型注解、collections/functools/itertools、并发进阶（线程/进程/协程）、Pythonic 写法与性能优化，以及按场景分类的常用第三方库。学完后能够在工程实践中运用 Python 中高级特性写出高效、可维护的代码。环境搭建、虚拟环境、subprocess、struct 协议解析与 C++ 互调见《07-Python脚本与自动化.md》，本文不重复。对照 C++ 理解：装饰器≈编译期/运行期包装、描述符≈受控成员、生成器≈可暂停的协程式迭代器、上下文管理器≈RAII。
 
 ## 本章速览
 
@@ -480,7 +480,7 @@ with ExitStack() as stack:              # 数量在运行期才知道的多个�
 
 ## 9. 高频第三方库（按场景，装了就能提效）
 
-> 安装一律在激活的虚拟环境里 `pip install xxx`（环境见《05-Python脚本与自动化.md》）。
+> 安装一律在激活的虚拟环境里 `pip install xxx`（环境见《07-Python脚本与自动化.md》）。
 
 | 场景 | 首选库 | 说明 |
 | --- | --- | --- |
@@ -554,7 +554,7 @@ match cmd:                                      # 3.10+ 结构化模式匹配，
 4. **选对数据结构**：成员判断用 set/dict（O(1)）而非 list（O(n)）；deque 两端操作；heapq 做 TopK；
 5. **省内存用生成器**：大文件/大序列逐项处理，不一次性建 list；海量小对象用 `__slots__`/dataclass；
 6. **字符串拼接用 `"".join(list)`**，别在循环里 `+=`（不可变对象反复拷贝）；
-7. **IO 并发、CPU 多进程**；纯 Python 热循环最后才考虑 numba/Cython/下沉 C++（见《05-Python脚本与自动化.md》第 7 章 pybind11）；
+7. **IO 并发、CPU 多进程**；纯 Python 热循环最后才考虑 numba/Cython/下沉 C++（见《07-Python脚本与自动化.md》第 7 章 pybind11）；
 8. 缓存重复计算：`@functools.cache`/`lru_cache`（参数可哈希）。
 
 ```python
@@ -611,8 +611,8 @@ asyncio：create_task + gather(return_exceptions) + Semaphore 限流 + run_in_ex
 - 类型注解 typing：[docs.python.org/3/library/typing.html](https://docs.python.org/3/library/typing.html)；mypy：[mypy.readthedocs.io](https://mypy.readthedocs.io/)
 - pydantic v2：[docs.pydantic.dev](https://docs.pydantic.dev/)；FastAPI：[fastapi.tiangolo.com](https://fastapi.tiangolo.com/)；httpx：[python-httpx.org](https://www.python-httpx.org/)
 - 《Python Cookbook（第 3 版）》：中高级惯用法最对味的一本书；性能剖析 cProfile：[docs.python.org/3/library/profile.html](https://docs.python.org/3/library/profile.html)
-- 与本知识库联动：环境/工程化/subprocess/struct/C++ 互调见《05-Python脚本与自动化.md》，单测见《../07-调试与测试/05-单元测试与测试框架.md》，C++ 侧线程/内存序见《../04-并发编程/04-原子操作与C++内存模型.md》。
+- 与本知识库联动：环境/工程化/subprocess/struct/C++ 互调见《07-Python脚本与自动化.md》，单测见《../07-调试与测试/05-单元测试与测试框架.md》，C++ 侧线程/内存序见《../04-并发编程/04-原子操作与C++内存模型.md》。
 
 ---
 
-上一篇：《05-Python脚本与自动化.md》
+上一篇：《07-Python脚本与自动化.md》　｜　模块索引：《../README.md》

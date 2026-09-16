@@ -28,12 +28,13 @@
   - [8.6 Default / Sized](#86-default--sized)
 - [9. 对照 C++：虚函数 / Concepts](#9-对照-c虚函数--concepts)
 - [10. 综合示例：泛型缓存系统](#10-综合示例泛型缓存系统)
-- [11. 常见坑与编译错误](#11-常见坑与编译错误)
+- [11. 快速参考卡片](#11-快速参考卡片)
+- [12. 常见坑与编译错误](#12-常见坑与编译错误)
   - [错误 1：the trait bound `T: Trait` is not satisfied](#错误-1the-trait-bound-t-trait-is-not-satisfied)
   - [错误 2：cannot infer type for type parameter](#错误-2cannot-infer-type-for-type-parameter)
   - [错误 3：the trait `Trait` is not implemented for `&T`](#错误-3the-trait-trait-is-not-implemented-for-t)
   - [错误 4：method `method` cannot be called on trait object](#错误-4method-method-cannot-be-called-on-trait-object)
-- [12. 本节小结](#12-本节小结)
+- [13. 本节小结](#13-本节小结)
 
 ---
 
@@ -892,7 +893,24 @@ fn main() {
 }
 ```
 
-## 11. 常见坑与编译错误
+## 11. 快速参考卡片
+
+| 查询点 | 速答 |
+| --- | --- |
+| 定义与实现 | `trait Speak { fn s(&self) -> String; }` / `impl Speak for Dog { fn s(&self) -> String { .. } }` |
+| 默认方法 | trait 内可给默认实现，类型可覆写或不写 |
+| 泛型 vs dyn | 泛型走单态化（零成本，代码膨胀）；`dyn Trait` 动态分发（vtable，一个间接指针开销） |
+| bound 三种写法 | `fn f<T: Clone>(t: T)`、`where T: Clone + Debug`、`impl Trait` 参数/返回 |
+| 关联类型 vs 泛型参数 | `trait Add { type Output; }`：一个类型只能实现一次；泛型参数版可多次实现 |
+| 对象安全（可用 dyn） | 方法不能有泛型参数、不能返回 `Self`（`Box<Self>` 可以）、不能是关联函数 |
+| 孤儿规则 | `impl` 只能写在 trait 或类型所在的 crate 内 → 外部类型用 newtype 包装后再实现 |
+| 常用可 derive trait | Debug、Clone、Copy、PartialEq/Eq、PartialOrd/Ord、Hash、Default |
+| supetrait | `trait A: B`：实现 A 必须先实现 B |
+| 静态分发选型 | 单态化优先；需要在集合中存异构对象或减少编译时间时用 `Box<dyn Trait>` |
+
+---
+
+## 12. 常见坑与编译错误
 
 ### 错误 1：the trait bound `T: Trait` is not satisfied
 
@@ -922,7 +940,7 @@ error: the `method` method cannot be invoked on a trait object
 ```
 **原因**：trait 对象调用了不满足对象安全的方法（如返回 Self、有泛型参数）。**修复**：给方法加 `where Self: Sized` 约束，或改用泛型静态分发。
 
-## 12. 本节小结
+## 13. 本节小结
 
 - **trait** 是 Rust 的接口定义机制，支持默认方法，可以为外部类型实现（孤儿规则内）。与 C++ 抽象基类类似但更灵活，没有继承和数据字段。
 - **泛型编程**通过单态化实现零成本抽象，trait bound 在定义处检查（早检查），错误信息比 C++ 模板清晰。
@@ -936,5 +954,4 @@ error: the `method` method cannot be invoked on a trait object
 
 ---
 
-上一篇：《04-结构体枚举与模式匹配.md》
-下一篇：《06-错误处理工程化.md》
+上一篇：《04-结构体枚举与模式匹配.md》　｜　下一篇：《06-错误处理工程化.md》　｜　模块索引：《../README.md》

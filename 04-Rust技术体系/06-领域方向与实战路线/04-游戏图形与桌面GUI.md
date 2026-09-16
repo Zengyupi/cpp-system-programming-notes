@@ -1,4 +1,4 @@
-# 游戏图形与桌面GUI
+# 游戏图形与桌面 GUI
 
 > 本节目标：掌握 Rust 在游戏引擎（Bevy ECS）、跨平台图形（wgpu）、即时模式 GUI（egui）、桌面应用框架（Tauri/slint）中的核心概念与最小可运行示例，理解各框架的设计哲学与适用场景，并与 C++ Qt 生态做对照。
 
@@ -27,7 +27,9 @@
 - [6. 桌面端选型指南](#6-桌面端选型指南)
   - [6.1 各框架对比表](#61-各框架对比表)
   - [6.2 选型决策树](#62-选型决策树)
-- [7. 本节小结](#7-本节小结)
+- [7. 快速参考卡片](#7-快速参考卡片)
+- [8. 常见坑](#8-常见坑)
+- [9. 本节小结](#9-本节小结)
 
 ---
 
@@ -666,7 +668,53 @@ slint 的优势：UI 描述编译期检查（类型错误、属性不存在在�
             └─ 否 → egui 或 slint（从轻量开始）
 ```
 
-## 7. 本节小结
+## 7. 快速参考卡片
+
+| 查询点 | 速答 |
+| --- | --- |
+| ECS 核心 | 组件（数据）+ 系统（逻辑）+ 实体（ID）；查询 `Query<(&Transform, &mut Velocity)>` |
+| Bevy 起步 | `App::new().add_plugins(DefaultPlugins).add_systems(Update, sys).run()` |
+| 系统顺序 | `.chain()`、`.before()/.after()` 显式排序；并行系统争用同一组件会 panic |
+| wgpu 后端 | Vulkan/Metal/DX12/GL/WebGPU 统一抽象；`Instance::request_adapter` → `Device`/`Queue` |
+| 渲染管线 | `RenderPipelineDescriptor`（顶点/片元着色器 + 顶点布局 + 混合 + 深度） |
+| egui 用法 | `egui::CentralPanel::default().show(ctx, \|ui\| ui.label("hi"))`；即时模式每帧重建 UI |
+| egui 集成 | `egui-winit` + `egui-wgpu`；或直接用 `eframe` 一行起应用 |
+| Tauri 结构 | Web 前端 + Rust 后端；`#[tauri::command]` 暴露函数，前端 `invoke("cmd", {...})` |
+| slint 语法 | `.slint` 声明式组件 + 属性绑定；`slint::include_modules!()` 编译期生成 |
+| 选型 | 游戏/渲染 Bevy+wgpu；桌面小工具 egui；Web 技术栈 Tauri；原生体验 slint |
+| 常见坑点 | 每帧重建 pipeline/bind group（必须缓存）；实体 ID 复用；DPR/窗口缩放未处理 |
+
+---
+
+## 8. 常见坑
+
+### 坑 1：每帧重建 GPU 资源
+
+在 `render` 里 `create_render_pipeline`/`create_bind_group` 会带来频繁的驱动分配与卡顿。正确做法：在 `init`/`resume` 时创建并缓存（`Resource` 或组件里持有），窗口尺寸变化时只重建与尺寸相关的部分。
+
+### 坑 2：把 `Entity` 当长期引用
+
+实体被 `despawn` 后其 ID 可能被复用，保存的 `Entity` 会指向"新对象"。需要长期引用时用自定义句柄（u64 + 世代号），或每次使用前校验。
+
+### 坑 3：系统查询冲突导致 panic
+
+两个系统同时可变借用同一组件会触发运行时 panic（Bevy 的 `SystemParam` 冲突）。用 `.chain()` 明确串行，或拆分成不同组件（如 `Position` 与 `Velocity` 分离）。
+
+### 坑 4：egui 即时模式里做重活
+
+即时模式 UI 每帧重建，若在闭包里做文件扫描、正则匹配、大数据排序，帧率会塌。把结果缓存到自身状态或 `egui::Memory`，用输入变化触发重算。
+
+### 坑 5：窗口缩放/高 DPI 未处理
+
+Surface 配置需随 `Resized` 事件重建，否则出现拉伸、模糊或 `SurfaceError::Outdated` panic。同时按 `scale_factor` 换算逻辑像素与物理像素。
+
+### 坑 6：Tauri 命令类型不匹配
+
+前端 `invoke` 的参数名与 Rust 结构体字段名（默认 camelCase 转换）不一致、返回类型未实现 `Serialize` 都会在运行期报错。开发期打开 devtools 与日志确认序列化形状。
+
+---
+
+## 9. 本节小结
 
 Rust 的图形与 GUI 生态正在快速成熟。Bevy 用 ECS 架构重新定义了游戏引擎的组织方式，数据驱动的系统调度天然支持并行。wgpu 提供了安全的跨 GPU 抽象，用所有权系统管理 Vulkan/Metal/DX12 资源。egui 的即时模式让 GUI 变得简单直接，特别适合工具和调试面板。Tauri 用 Rust 后端 + Web 前端的组合，以极小的二进制和内存占用挑战 Electron，是 C++ Qt 开发者转向 Rust 桌面的最平滑路径。slint 提供了 QML 风格的声明式原生 GUI。选型时根据渲染需求、团队技能、应用场景做决策——游戏选 Bevy，工具选 Tauri/egui，原生体验选 slint。
 
@@ -674,5 +722,4 @@ Rust 的图形与 GUI 生态正在快速成熟。Bevy 用 ECS 架构重新定义
 
 ---
 
-上一篇：《03-区块链分布式与云原生.md》
-下一篇：《05-Rust与C++选型对照及学习路线.md》
+上一篇：《03-区块链分布式与云原生.md》　｜　下一篇：《05-Rust与C++选型对照及学习路线.md》　｜　模块索引：《../README.md》

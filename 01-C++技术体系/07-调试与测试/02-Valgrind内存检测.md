@@ -25,6 +25,7 @@
   - [6.2 常见错误报告含义](#62-常见错误报告含义)
 - [7. 辅助分析工具（结果文件的可视化）](#7-辅助分析工具结果文件的可视化)
 - [8. 快速参考卡片（常用组合速查）](#8-快速参考卡片常用组合速查)
+- [9. 常见坑与易错点](#9-常见坑与易错点)
 
 ---
 
@@ -235,5 +236,16 @@ ms_print massif.out.12345 | less             # 查看堆内存增长曲线
 
 ---
 
-上一篇：《01-GDB程序调试.md》
-下一篇：《03-perf性能剖析.md》
+## 9. 常见坑与易错点
+
+| 现象 | 根因 | 对策 |
+|---|---|---|
+| 报错栈只给函数名、定位不到具体行号 | 被测程序未编译 `-g`，或被优化/strip | 编译加 `-g -O0`（见第 5 节提示），别拿发布版/strip 后的二进制跑 Valgrind |
+| 同时开了 ASan（`-fsanitize=address`）后报告失真/互相干扰 | AddressSanitizer 自己也插桩改内存布局，与 Memcheck 叠加结论混乱 | 二者只选其一：日常快速查用 ASan，精确泄漏溯源/无 ASan 环境用 Valgrind；不要同时链接 |
+| LEAK SUMMARY 里 `definitely`/`indirectly`/`possibly lost` 不知先修哪个 | 三者严重程度不同（见 6.1） | `definitely lost` 必修；`indirectly lost` 随直接泄漏一起释放即消；`possibly lost` 多为数组中间指针偏移，按场景检查；`still reachable` 一般可忽略 |
+| 报 `Conditional jump or move depends on uninitialised value` / `Use of uninitialised value` | 用未初始化变量做条件判断或参与运算 | 先 `--track-origins=yes` 溯源"该值由谁产生"，再回代码补初始化；常见于未置 `\0` 的字符串、栈数组未清零 |
+| 满屏 glibc / X11 / Qt 系统库报告，淹没自家代码 | 系统/第三方库本身的误报或已知噪声 | 只看带自家源码路径的帧；用 `--gen-suppressions=yes` 对噪声帧生成规则存为 .supp，运行时 `--suppressions=xxx.supp` 屏蔽 |
+
+---
+
+上一篇：《01-GDB程序调试.md》　｜　下一篇：《03-perf性能剖析.md》　｜　模块索引：《../README.md》

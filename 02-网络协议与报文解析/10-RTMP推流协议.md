@@ -129,7 +129,7 @@ Message Header 有 4 种格式，由 Basic Header 的 fmt 字段决定：
 7-10 字节:  message stream id（4字节小端，流ID，createStream 返回的 ID）
 ```
 
-**fmt=1（11字节头，7字节）：** 同 CSID 同 Stream 的后续消息，时间戳为增量
+**fmt=1（7 字节头）：** 同 CSID 同 Stream 的后续消息，时间戳为增量
 
 ```text
 0-2 字节:   timestamp delta（3字节大端，相对上一Chunk的时间戳增量）
@@ -138,7 +138,7 @@ Message Header 有 4 种格式，由 Basic Header 的 fmt 字段决定：
 （无 message stream id，继承 fmt=0 的值）
 ```
 
-**fmt=2（11字节头，3字节）：** 同 CSID 同 Stream 同长度同类型的后续消息
+**fmt=2（3 字节头）：** 同 CSID 同 Stream 同长度同类型的后续消息
 
 ```text
 0-2 字节:   timestamp delta（3字节大端）
@@ -523,4 +523,4 @@ Extended Timestamp: 4B BE，仅当 timestamp/delta >= 0xFFFFFF 时出现
 
 ---
 
-上一篇：《09-MQTT协议与mosquitto.md》
+上一篇：《09-MQTT协议与mosquitto.md》　｜　模块索引：《README.md》

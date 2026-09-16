@@ -478,5 +478,4 @@ full RELRO 判定：    readelf -d app | grep BIND_NOW
 
 ---
 
-上一篇：《04-目标文件分析.md》
-下一篇：《06-strace系统调用跟踪.md》
+上一篇：《04-目标文件分析.md》　｜　下一篇：《06-strace系统调用跟踪.md》　｜　模块索引：《../README.md》

@@ -627,5 +627,4 @@ BidiStream:     stub->Method(&ctx) → stream; stream->Write(req); stream->Read(
 
 ---
 
-上一篇：《05-Nginx深度：反向代理与模块开发.md》
-下一篇：《07-ZeroMQ消息模式.md》
+上一篇：《05-Nginx深度：反向代理与模块开发.md》　｜　下一篇：《07-ZeroMQ消息模式.md》　｜　模块索引：《../README.md》

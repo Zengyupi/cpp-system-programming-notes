@@ -245,7 +245,7 @@ ipv4  2  tcp  6  43199  ESTABLISHED  src=... dst=... sport=... dport=...  [ASSUR
 └─ 网络层协议
 ```
 
-> conntrack 表满是高频线上事故：`dmesg | grep "nf_conntrack: table full"`，表现为新连接建立失败或延迟。调大 `nf_conntrack_max`，或缩短 `nf_conntrack_tcp_timeout_established`（默认 432000 秒=5天，对短连接服务太长）。详见《10-Linux系统监控命令族.md》sysctl 部分。
+> conntrack 表满是高频线上事故：`dmesg | grep "nf_conntrack: table full"`，表现为新连接建立失败或延迟。调大 `nf_conntrack_max`，或缩短 `nf_conntrack_tcp_timeout_established`（默认 432000 秒=5 天，对短连接服务太长）。详见《10-Linux系统监控命令族.md》sysctl 部分。
 
 ---
 
@@ -565,5 +565,4 @@ iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 3128
 
 ---
 
-上一篇：《12-eBPF可观测性技术.md》
-下一篇：《14-Prometheus与Grafana监控告警.md》
+上一篇：《12-eBPF可观测性技术.md》　｜　下一篇：《14-Prometheus与Grafana监控告警.md》　｜　模块索引：《../README.md》

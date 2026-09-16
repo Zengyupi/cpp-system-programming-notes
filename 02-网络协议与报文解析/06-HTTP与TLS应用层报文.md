@@ -76,7 +76,7 @@ b\r\n             ← 下一块 11 字节
 0\r\n\r\n          ← 结束块
 ```
 
-- 手写解析器要先解析头部（遇到 `\r\n\r\n`），再按 Content-Length 或 chunked 读体——这本质也是**应用层分帧**，和你处理 Modbus/IEC104 半包是同一类问题（见 07 篇）；
+- 手写解析器要先解析头部（遇到 `\r\n\r\n`），再按 Content-Length 或 chunked 读体——这本质也是**应用层分帧**，与处理 Modbus/IEC104 半包是同一类问题（见 07 篇）；
 - **管线化(pipelining)** 允许连续发请求但响应必须按序，实践被 HTTP/2 多路复用取代；
 - HTTP/2 改为**二进制分帧**、单连接多流、头部压缩 HPACK；HTTP/3 基于 QUIC(UDP)。知道演进即可。
 
@@ -175,5 +175,4 @@ WebSocket：HTTP Upgrade→101后变全双工帧
 
 ---
 
-上一篇：《05-UDP-DNS-DHCP报文.md》
-下一篇：《07-Modbus与IEC104工业报文解析.md》
+上一篇：《05-UDP-DNS-DHCP报文.md》　｜　下一篇：《07-Modbus与IEC104工业报文解析.md》　｜　模块索引：《README.md》

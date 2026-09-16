@@ -217,7 +217,7 @@ ICE 为每个传输通道收集三类候选地址（Candidate）：
 | **中继候选（Relay）** | `typ relay` | TURN 服务器分配的中继地址 | 最低 |
 
 优先级公式（RFC 8445）：
-```
+```text
 priority = (2^24)*(type_preference) + (2^8)*(local_preference) + (256 - component_id)
 ```
 类型偏好：host=126，srflx=100，relay=0。
@@ -448,5 +448,4 @@ NAT 映射超时：UDP 通常 30s~5min，TCP 通常 2~4min，需心跳保活
 
 ---
 
-上一篇：《03-Windows平台开发.md》
-下一篇：《05-frp内网穿透.md》
+上一篇：《03-Windows平台开发.md》　｜　下一篇：《05-frp内网穿透.md》　｜　模块索引：《../README.md》

@@ -23,6 +23,8 @@
   - [3.1 C++ 特性在嵌入式的代价分析](#31-c-特性在嵌入式的代价分析)
   - [3.2 静态化写法：禁用异常/RTTI + placement new + 静态分配](#32-静态化写法禁用异常rtti--placement-new--静态分配)
   - [3.3 C++ 在嵌入式的适用场景与限制](#33-c-在嵌入式的适用场景与限制)
+- [4. 快速参考卡片](#4-快速参考卡片)
+- [5. 常见坑](#5-常见坑)
 
 ---
 
@@ -129,7 +131,7 @@ SECTIONS {
 
 | 占用 | 来源 |
 | --- | --- |
-| 任务/线程栈 | 每层函数调用的局部变量 + 传给被调函数的参数 +  Cortex-M 异常压栈 8 字（R0-R3/R12/LR/PC/xPSR）+ FPU 额外 26 字 |
+| 任务/线程栈 | 每层函数调用的局部变量 + 传给被调函数的参数 + Cortex-M 异常硬件栈帧：基础 8 字（R0–R3/R12/LR/PC/xPSR）；带 FPU 时扩展栈帧共 26 字（额外压入 S0–S15、FPSCR 与 1 个对齐保留字，即多 18 字；开启懒加载时延迟到 ISR 首次执行浮点指令才真正压入） |
 | 中断嵌套 | 每层中断都要在当前栈上压一份硬件栈帧，按最深嵌套累加 |
 | 主栈/MSP | 不用 OS 时唯一的栈；用 OS 时中断仍走 MSP，任务走各自 PSP |
 
@@ -350,5 +352,39 @@ void  operator delete(void* p) noexcept { pool_free(p); }
 
 ---
 
-上一篇：《01-嵌入式开发导论与硬件基础.md》
-下一篇：《03-外设总线与DMA定时器.md》
+## 4. 快速参考卡片
+
+### 从上电到 main 的检查清单
+
+1. 向量表第 0 项 = 初始 MSP（`_estack`），第 1 项 = Reset_Handler；
+2. Reset_Handler：拷 `.data`（Flash→RAM）→ 清 `.bss` → `SystemInit()` 配时钟 → `__libc_init_array()` → `main()`；
+3. 链接脚本 `_sidata/_sdata/_edata/_sbss/_ebss` 必须与启动汇编符号一一对应。
+
+### 关键字/宏速查
+
+| 写法 | 用途 |
+| --- | --- |
+| `volatile uint32_t*` | 外设寄存器、ISR 与主循环共享变量、DMA 缓冲 |
+| `BSRR` 写 `1<<n` / `1<<(n+16)` | 原子置位/复位，替代 `ODR` 读-改-写 |
+| `__get_BASEPRI`/`__set_BASEPRI` | 裸机临界区，只屏蔽低于阈值的中断 |
+| `taskENTER_CRITICAL`/`...FromISR` | FreeRTOS 任务侧 / ISR 侧分工 |
+| `__attribute__((packed))` / `#pragma pack(1)` | 协议/外设结构体紧凑 |
+| `-fno-exceptions -fno-rtti -fno-threadsafe-statics` | 嵌入式 C++ 三禁 |
+| `new (buf) T(...)` + 显式 `~T()` | placement new，不触发堆分配 |
+
+---
+
+## 5. 常见坑
+
+1. **漏加 volatile 导致死循环/读旧值**：内存映射寄存器或 ISR 改写的标志不加 volatile，编译器把循环优化成"只读一次"。
+2. **临界区里做长事或阻塞**：关中断期间调用 `printf`/延时，丢中断、破坏实时性；临界区只保护"读-改-写"，越短越好。
+3. **环形缓冲区 size 非 2 的幂**：代码用 `&(SIZE-1)` 代替取模，一旦 size 改成非 2 的幂位运算即错；判满靠"牺牲一个槽"（`next==tail`）。
+4. **heap 与 stack 相撞**：大局部数组、深递归、`printf` 内部缓冲吃栈，栈向上/堆向下增长最终撞穿，现象是随机 HardFault；用栈水位线（0xA5 填充 / `uxTaskGetStackHighWaterMark`）实测。
+5. **`.data` 初值没拷进 RAM**：链接脚本 `AT > FLASH` 与启动代码拷数符号不匹配，全局变量初值异常；改内存分区后必须同时改 `.ld` 与启动文件。
+6. **packed 结构体非对齐访问**：Cortex-M0/M0+ 访问 packed 内的 `uint16_t/uint32_t` 成员直接 HardFault；M3+ 虽支持但更慢，总线/DMA 访问地址仍要对齐。
+7. **C++ 全局对象构造在 main 之前**：构造函数里操作尚未 `SystemInit()` 的硬件，或跨翻译单元构造顺序未定义；硬件初始化放 `main` 或显式两阶段 init。
+8. **ISR 漏 `extern "C"`**：C++ 编译后函数名 mangling，启动文件按 C 符号引用导致链接失败；所有向量表 ISR 入口必须 `extern "C"`。
+
+---
+
+上一篇：《01-嵌入式开发导论与硬件基础.md》　｜　下一篇：《03-外设总线与DMA定时器.md》　｜　模块索引：《../README.md》

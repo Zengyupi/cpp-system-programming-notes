@@ -437,7 +437,7 @@ net.ipv4.tcp_fin_timeout = 15           # FIN-WAIT-2 超时
 net.ipv4.ip_local_port_range = 1024 65535   # 本地端口范围
 ```
 
-> **conntrack 表满是高频线上事故**：`dmesg | grep "nf_conntrack: table full"` 会看到报错，表现为新连接建立失败。调大 `nf_conntrack_max` 或减少 `nf_conntrack_tcp_timeout_established`（默认 432000 秒=5天，对短连接服务太长）。
+> **conntrack 表满是高频线上事故**：`dmesg | grep "nf_conntrack: table full"` 会看到报错，表现为新连接建立失败。调大 `nf_conntrack_max` 或减少 `nf_conntrack_tcp_timeout_established`（默认 432000 秒=5 天，对短连接服务太长）。
 
 ### 5.3 ulimit — 进程资源限制
 
@@ -579,5 +579,4 @@ ss -tan | awk '{print $1}' | sort | uniq -c | sort -rn
 
 ---
 
-上一篇：《09-nc与telnet网络调试.md》
-下一篇：《11-压测工具族.md》
+上一篇：《09-nc与telnet网络调试.md》　｜　下一篇：《11-压测工具族.md》　｜　模块索引：《../README.md》

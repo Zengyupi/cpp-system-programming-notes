@@ -723,5 +723,4 @@ static void ws_accept(const char *key, char *out, int outsz) {
 
 ---
 
-上一篇：《03-高性能服务器设计.md》
-下一篇：《05-Nginx深度：反向代理与模块开发.md》
+上一篇：《03-高性能服务器设计.md》　｜　下一篇：《05-Nginx深度：反向代理与模块开发.md》　｜　模块索引：《../README.md》

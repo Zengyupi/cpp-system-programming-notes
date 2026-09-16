@@ -19,7 +19,7 @@
 - [4. 关键概念](#4-关键概念)
   - [4.1 并发线程数（NumberOfConcurrentThreads）](#41-并发线程数numberofconcurrentthreads)
   - [4.2 完成键（CompletionKey）](#42-完成键completionkey)
-  - [4.3 扩展函数（AcceptEx/GetAcceptExSockaddrs）](#43-扩展函数acceplexgetacceptexsockaddrs)
+  - [4.3 扩展函数（AcceptEx/GetAcceptExSockaddrs）](#43-扩展函数acceptexgetacceptexsockaddrs)
 - [5. 多线程处理方案](#5-多线程处理方案)
   - [5.1 线程池设计](#51-线程池设计)
   - [5.2 AcceptEx 预投递](#52-acceptex-预投递)
@@ -551,4 +551,4 @@ IOCP API 速查：
 
 ---
 
-上一篇：《08-virtio与vhost虚拟化.md》
+上一篇：《08-virtio与vhost虚拟化.md》　｜　模块索引：《../README.md》

@@ -1,4 +1,4 @@
-# HTTP服务与Web后端
+# HTTP 服务与 Web 后端
 
 > 本节目标：掌握 Rust Web 后端的完整技术栈——从 hyper 底层 HTTP 实现到 axum 高阶框架，从 Tower 中间件层到 sqlx 编译期 SQL 校验，建立可与 C++ 后端框架对标的生产级 Web 服务能力。
 
@@ -26,7 +26,8 @@
 - [7. Tower 中间件层](#7-tower-中间件层)
   - [7.1 Service trait 与中间件组合](#71-service-trait-与中间件组合)
   - [7.2 常用中间件：超时、限流、追踪](#72-常用中间件超时限流追踪)
-- [8. 常见坑与本节小结](#8-常见坑与本节小结)
+- [8. 快速参考卡片](#8-快速参考卡片)
+- [9. 常见坑与本节小结](#9-常见坑与本节小结)
   - [常见坑](#常见坑)
   - [本节小结](#本节小结)
 
@@ -873,7 +874,24 @@ let trace_layer = TraceLayer::new_for_http()
 
 C++ 对照：C++ 中这些中间件功能通常需要自己实现或依赖框架内置（Drogon 有内置的限流和压缩，但没有统一的中间件生态）。Tower 的 `Service` 抽象使得中间件可以在 hyper、axum、tonic（gRPC）等不同框架间复用，这是 C++ 生态缺乏的统一抽象层。
 
-## 8. 常见坑与本节小结
+## 8. 快速参考卡片
+
+| 查询点 | 速答 |
+| --- | --- |
+| 框架选型 | `axum`（tokio 生态、tower 中间件）/ `actix-web`（成熟、性能强）/ `warp`（组合子） |
+| 最小服务 | `let app = Router::new().route("/hi", get(handler)); axum::serve(l, app).await?` |
+| 提取器 | `Path(id): Path<u32>`、`Query(p): Query<P>`、`Json(v): Json<T>`、`State(s): State<AppState>` |
+| 响应 | 返回 `impl IntoResponse`：`&'static str`、`Json(v)`、`(StatusCode, Json)` |
+| 共享状态 | `State` 注入 `Arc<AppState>`；数据库连接池 `sqlx::PgPool` |
+| 中间件 | `tower::ServiceBuilder` + `TraceLayer`/`TimeoutLayer`/`CorsLayer` |
+| 数据库 | `sqlx`（编译期校验 SQL，`cargo sqlx prepare` 供 CI）/ `diesel` / `sea-orm` |
+| 优雅退出 | `axum::serve(...).with_graceful_shutdown(signal)` |
+| 常见坑点 | handler 里阻塞（同步 DB 调用）→ 卡 reactor，用 `spawn_blocking`；`Json` 提取失败返回 422 而非 400 需知晓 |
+| 压测 | `oha`/`wrk` 对比 C++ Nginx 侧数据，注意 tokio 线程数配置 |
+
+---
+
+## 9. 常见坑与本节小结
 
 ### 常见坑
 
@@ -892,5 +910,4 @@ Rust Web 后端生态以 hyper 为底层 HTTP 实现，axum 为主流高阶框�
 
 ---
 
-上一篇：《01-网络编程与异步IO.md》
-下一篇：《03-嵌入式no_std与裸机.md》
+上一篇：《01-网络编程与异步IO.md》　｜　下一篇：《03-嵌入式no_std与裸机.md》　｜　模块索引：《../README.md》

@@ -900,4 +900,4 @@ orders_2: id % 4 == 2      orders_3: id % 4 == 3
 
 ---
 
-下一篇：《02-Redis设计与数据结构.md》
+下一篇：《02-Redis设计与数据结构.md》　｜　模块索引：《../README.md》

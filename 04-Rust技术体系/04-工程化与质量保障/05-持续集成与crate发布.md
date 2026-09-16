@@ -1,4 +1,4 @@
-# 持续集成与crate发布
+# 持续集成与 crate 发布
 
 > 本节目标：掌握 Rust 工程化的最后一公里——从 cargo 命令全表到 build.rs 构建脚本，从 profile 优化到交叉编译，再到 GitHub Actions CI 模板与 crates.io 发布流程，建立完整的工程交付能力。
 
@@ -22,7 +22,8 @@
 - [6. crates.io 发布流程](#6-cratesio-发布流程)
   - [6.1 发布前检查与元数据](#61-发布前检查与元数据)
   - [6.2 语义化版本与 MSRV](#62-语义化版本与-msrv)
-- [7. 常见坑与本节小结](#7-常见坑与本节小结)
+- [7. 快速参考卡片](#7-快速参考卡片)
+- [8. 常见坑与本节小结](#8-常见坑与本节小结)
   - [常见坑](#常见坑)
   - [本节小结](#本节小结)
 
@@ -525,7 +526,23 @@ msrv:
 
 C++ 对照：C++ 库的版本管理通常没有统一标准，有的用 SemVer，有的用日期版本，有的用提交哈希。C++ 标准的版本（C++11/14/17/20/23）等价于 Rust 的 edition，但 C++ 编译器的向后兼容性比 Rust 差（新编译器可能拒绝旧代码）。crates.io 的不可变性和 SemVer 严格性是 Rust 生态质量保障的重要基础——依赖的 crate 不会突然消失或变更，`Cargo.lock` 确保了构建的可复现性。
 
-## 7. 常见坑与本节小结
+## 7. 快速参考卡片
+
+| 查询点 | 速答 |
+| --- | --- |
+| CI 最小流程 | `fmt --check` → `clippy -D warnings` → `test` → `doc` |
+| GitHub Actions 缓存 | `Swatinem/rust-cache@v2` 缓存 `target/`，显著缩短时间 |
+| 多工具链矩阵 | `strategy.matrix.toolchain: [stable, beta, nightly]` |
+| 交叉编译 | `cross`（基于 Docker）或 `cargo-zigbuild`；`rustup target add` |
+| 发布检查 | `cargo package --list` 预览打包内容，`cargo publish --dry-run` |
+| 版本语义 | SemVer：破坏性改动升 major；`cargo release`/`release-plz` 自动化 |
+| 发布清单 | README、LICENSE、`description`、`repository`、`keywords`、`categories`、`#![doc = include_str!("../README.md")]` |
+| 特性开关 | 避免默认依赖过重；`default = ["std"]` 模式让 `no_std` 用户可关 |
+| 常见坑点 | 忘记 `CHANGELOG`；`Cargo.lock` 已发布版本不可改（yank 后可修） |
+
+---
+
+## 8. 常见坑与本节小结
 
 ### 常见坑
 
@@ -544,4 +561,4 @@ Rust 的工程化交付以 cargo 为统一入口，覆盖了从依赖管理、�
 
 ---
 
-上一篇：《04-编译错误排查与调试.md》
+上一篇：《04-编译错误排查与调试.md》　｜　模块索引：《../README.md》

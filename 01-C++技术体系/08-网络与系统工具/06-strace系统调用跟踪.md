@@ -294,5 +294,4 @@ strace -e trace=bind,listen ./app
 
 ---
 
-上一篇：《05-readelf工具.md》
-下一篇：《07-curl网络调试.md》
+上一篇：《05-readelf工具.md》　｜　下一篇：《07-curl网络调试.md》　｜　模块索引：《../README.md》

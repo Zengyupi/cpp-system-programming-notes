@@ -722,5 +722,4 @@ git branch -d hotfix/critical-bug
 
 ---
 
-上一篇：《02-依赖管理与包管理器.md》
-下一篇：《04-Shell脚本编程.md》
+上一篇：《02-依赖管理与包管理器.md》　｜　下一篇：《04-Shell脚本编程.md》　｜　模块索引：《../README.md》

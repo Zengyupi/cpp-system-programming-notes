@@ -382,5 +382,4 @@ if (err != cudaSuccess) printf("Kernel execution failed: %s\n", cudaGetErrorStri
 
 ---
 
-上一篇：《03-端侧AI推理部署.md》
-下一篇：《05-图形学与游戏引擎.md》
+上一篇：《03-端侧AI推理部署.md》　｜　下一篇：《05-图形学与游戏引擎.md》　｜　模块索引：《../README.md》

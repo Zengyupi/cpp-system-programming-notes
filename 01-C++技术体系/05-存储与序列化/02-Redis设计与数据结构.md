@@ -832,5 +832,4 @@ SLOWLOG LEN / SLOWLOG RESET
 
 ---
 
-上一篇：《01-MySQL数据库精要.md》
-下一篇：《03-Protobuf序列化协议.md》
+上一篇：《01-MySQL数据库精要.md》　｜　下一篇：《03-Protobuf序列化协议.md》　｜　模块索引：《../README.md》

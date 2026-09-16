@@ -236,7 +236,7 @@ ICE 收集完候选后，按优先级配对进行连通性检查：
 ```
 
 优先级公式：
-```
+```text
 priority = (2^24)*(type_preference) + (2^8)*(local_preference) + (2^0)*(256-component_id)
 type_preference: host=126, srflx=100, relay=0
 ```
@@ -714,5 +714,4 @@ ICE 候选类型表：
 
 ---
 
-上一篇：《07-游戏服务器架构Skynet.md》
-下一篇：《09-ROS2实操要点.md》
+上一篇：《07-游戏服务器架构Skynet.md》　｜　下一篇：《09-ROS2实操要点.md》　｜　模块索引：《../README.md》

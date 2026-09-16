@@ -1,35 +1,37 @@
-# Tokio运行时与异步生态
+# Tokio 运行时与异步生态
 
-> 本节目标：掌握Tokio运行时的核心机制——#[tokio::main]、多线程work-stealing调度器、spawn/block_on、TcpListener异步IO（对照epoll/io_uring/Reactor）、tokio::sync原语、select!与超时取消，了解async-std/smol对比，并能进行运行时选型。
+> 本节目标：掌握 Tokio 运行时的核心机制——#[tokio::main]、多线程 work-stealing 调度器、spawn/block_on、TcpListener 异步 IO（对照 epoll/io_uring/Reactor）、tokio::sync 原语、select!与超时取消，了解 async-std/smol 对比，并能进行运行时选型。
 
 ## 本章速览
 
-- [1. Tokio运行时基础](#1-tokio运行时基础)
+- [1. Tokio 运行时基础](#1-tokio-运行时基础)
   - [1.1 #\[tokio::main\]与运行时创建](#11-tokiomain与运行时创建)
-  - [1.2 block_on与spawn](#12-block_on与spawn)
-  - [1.3 多线程work-stealing调度器](#13-多线程work-stealing调度器)
-- [2. 异步IO与Reactor模型](#2-异步io与reactor模型)
-  - [2.1 TcpListener异步接收](#21-tcplistener异步接收)
-  - [2.2 对照epoll/io_uring/Reactor](#22-对照epollio_uringreactor)
-- [3. tokio::sync同步原语](#3-tokiosync同步原语)
-  - [3.1 mpsc通道](#31-mpsc通道)
-  - [3.2 oneshot与watch](#32-oneshot与watch)
-  - [3.3 异步Mutex/RwLock](#33-异步mutexrwlock)
-  - [3.4 Notify与Barrier](#34-notify与barrier)
+  - [1.2 block_on 与 spawn](#12-block_on-与-spawn)
+  - [1.3 多线程 work-stealing 调度器](#13-多线程-work-stealing-调度器)
+- [2. 异步 IO 与 Reactor 模型](#2-异步-io-与-reactor-模型)
+  - [2.1 TcpListener 异步接收](#21-tcplistener-异步接收)
+  - [2.2 对照 epoll/io_uring/Reactor](#22-对照-epollio_uringreactor)
+- [3. tokio::sync 同步原语](#3-tokiosync-同步原语)
+  - [3.1 mpsc 通道](#31-mpsc-通道)
+  - [3.2 oneshot 与 watch](#32-oneshot-与-watch)
+  - [3.3 异步 Mutex/RwLock](#33-异步-mutexrwlock)
+  - [3.4 Notify 与 Barrier](#34-notify-与-barrier)
 - [4. select!与超时取消](#4-select与超时取消)
   - [4.1 select!宏](#41-select宏)
   - [4.2 超时与取消](#42-超时与取消)
-- [5. async-std与smol对比](#5-async-std与smol对比)
+- [5. async-std 与 smol 对比](#5-async-std-与-smol-对比)
 - [6. 运行时选型](#6-运行时选型)
-- [7. 本节小结](#7-本节小结)
+- [7. 快速参考卡片](#7-快速参考卡片)
+- [8. 常见坑](#8-常见坑)
+- [9. 本节小结](#9-本节小结)
 
 ---
 
-## 1. Tokio运行时基础
+## 1. Tokio 运行时基础
 
 ### 1.1 #[tokio::main]与运行时创建
 
-`#[tokio::main]`是一个属性宏，将`async fn main`变换为同步`fn main`并创建运行时：
+`#[tokio::main]` 是一个属性宏，将 `async fn main` 变换为同步 `fn main` 并创建运行时：
 
 ```toml
 # Cargo.toml
@@ -37,7 +39,7 @@
 tokio = { version = "1", features = ["full"] }
 ```
 
-（tokio版本以crates.io最新稳定版为准）
+（tokio 版本以 crates.io 最新稳定版为准）
 
 ```rust
 // 使用#[tokio::main]宏
@@ -53,7 +55,7 @@ async fn async_computation() -> i32 {
 }
 ```
 
-`#[tokio::main]`的等价展开（概念上）：
+`#[tokio::main]` 的等价展开（概念上）：
 
 ```rust
 fn main() {
@@ -105,9 +107,9 @@ fn main() {
 }
 ```
 
-### 1.2 block_on与spawn
+### 1.2 block_on 与 spawn
 
-`block_on`阻塞当前线程直到Future完成：
+`block_on` 阻塞当前线程直到 Future 完成：
 
 ```rust
 use tokio::runtime::Runtime;
@@ -126,7 +128,7 @@ fn main() {
 }
 ```
 
-`spawn`创建一个异步任务，在后台并发执行，返回`JoinHandle`：
+`spawn` 创建一个异步任务，在后台并发执行，返回 `JoinHandle`：
 
 ```rust
 use tokio::task;
@@ -163,9 +165,9 @@ async fn main() {
 }
 ```
 
-`spawn`的要求：Future必须是`Send + 'static`的，因为任务可能在不同线程上执行，且可能比当前作用域活得久。
+`spawn` 的要求：Future 必须是 `Send + 'static` 的，因为任务可能在不同线程上执行，且可能比当前作用域活得久。
 
-`spawn_local`用于当前线程运行时，不需要`Send`：
+`spawn_local` 用于当前线程运行时，不需要 `Send`：
 
 ```rust
 use tokio::task;
@@ -183,9 +185,9 @@ async fn main() {
 }
 ```
 
-### 1.3 多线程work-stealing调度器
+### 1.3 多线程 work-stealing 调度器
 
-Tokio的多线程运行时使用work-stealing调度器：
+Tokio 的多线程运行时使用 work-stealing 调度器：
 
 ```text
 工作线程池（4个线程）：
@@ -203,23 +205,23 @@ Tokio的多线程运行时使用work-stealing调度器：
                     从其他Worker的队列"偷"任务
 ```
 
-work-stealing的核心机制：
+work-stealing 的核心机制：
 1. 每个工作线程有自己的任务队列（双端队列）
 2. 线程从自己队列的头部取任务执行
 3. 当队列为空时，从其他线程队列的尾部"偷"任务
-4. 新spawn的任务放入当前线程的队列
-5. IO事件和定时器由专门的驱动线程处理，就绪后唤醒工作线程
+4. 新 spawn 的任务放入当前线程的队列
+5. IO 事件和定时器由专门的驱动线程处理，就绪后唤醒工作线程
 
 这种设计的优势：
 - **负载均衡**：空闲线程自动从繁忙线程偷任务
 - **低竞争**：每个线程主要操作自己的队列，减少锁竞争
-- **缓存友好**：任务倾向于在同一个线程上执行，提高CPU缓存命中率
+- **缓存友好**：任务倾向于在同一个线程上执行，提高 CPU 缓存命中率
 
-对照C++：C++没有标准的异步运行时，需要自己实现线程池或使用第三方库（如`boost::asio`的线程池）。Tokio的work-stealing调度器与Intel TBB的任务调度器类似，但Tokio集成了IO驱动和定时器，是完整的异步运行时。
+对照 C++：C++没有标准的异步运行时，需要自己实现线程池或使用第三方库（如 `boost::asio` 的线程池）。Tokio 的 work-stealing 调度器与 Intel TBB 的任务调度器类似，但 Tokio 集成了 IO 驱动和定时器，是完整的异步运行时。
 
-## 2. 异步IO与Reactor模型
+## 2. 异步 IO 与 Reactor 模型
 
-### 2.1 TcpListener异步接收
+### 2.1 TcpListener 异步接收
 
 ```rust
 use tokio::net::TcpListener;
@@ -265,13 +267,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 关键特性：
 - `accept().await`：等待连接时，当前任务被挂起，线程可以执行其他任务
-- 每个连接一个`tokio::spawn`任务，并发处理
-- `read`/`write_all`都是异步的，IO等待时不阻塞
+- 每个连接一个 `tokio::spawn` 任务，并发处理
+- `read`/`write_all` 都是异步的，IO 等待时不阻塞
 - 单线程可以处理数千个并发连接
 
-### 2.2 对照epoll/io_uring/Reactor
+### 2.2 对照 epoll/io_uring/Reactor
 
-Tokio的IO驱动在Linux上使用epoll（或io_uring，如果启用），实现Reactor模式：
+Tokio 的 IO 驱动在 Linux 上使用 epoll（或 io_uring，如果启用），实现 Reactor 模式：
 
 ```text
 Reactor模式架构：
@@ -297,22 +299,22 @@ Reactor收到事件，通过Waker唤醒对应Task
 Task被重新poll，accept返回Ready
 ```
 
-对照C++的Reactor实现（如`boost::asio`、`libevent`、`libuv`）：
+对照 C++的 Reactor 实现（如 `boost::asio`、`libevent`、`libuv`）：
 
 | 特性 | Tokio | boost::asio | libevent/libuv |
 |------|-------|-------------|----------------|
 | 异步模型 | async/await + Future | 回调/协程（C++20） | 回调 |
-| IO多路复用 | epoll/io_uring/kqueue | epoll/io_uring/kqueue | epoll/kqueue |
-| 调度器 | work-stealing线程池 | 线程池（需手动配置） | 单线程事件循环 |
-| 类型安全 | 强类型Future | 回调参数类型检查弱 | 弱类型回调 |
-| 取消 | drop Future即取消 | 需手动取消 | 需手动取消 |
+| IO 多路复用 | epoll/io_uring/kqueue | epoll/io_uring/kqueue | epoll/kqueue |
+| 调度器 | work-stealing 线程池 | 线程池（需手动配置） | 单线程事件循环 |
+| 类型安全 | 强类型 Future | 回调参数类型检查弱 | 弱类型回调 |
+| 取消 | drop Future 即取消 | 需手动取消 | 需手动取消 |
 | 错误处理 | Result + ? | error_code/异常 | 错误码回调 |
 
-交叉引用：IO多路复用与Reactor模型的底层原理详见《../../01-C++技术体系/03-网络编程/02-IO多路复用与Reactor模型.md》。Tokio的异步IO本质上是epoll/io_uring的Rust封装，加上Future/Waker的通知机制。
+交叉引用：IO 多路复用与 Reactor 模型的底层原理详见《../../01-C++技术体系/03-网络编程/02-IO多路复用与Reactor模型.md》。Tokio 的异步 IO 本质上是 epoll/io_uring 的 Rust 封装，加上 Future/Waker 的通知机制。
 
-## 3. tokio::sync同步原语
+## 3. tokio::sync 同步原语
 
-### 3.1 mpsc通道
+### 3.1 mpsc 通道
 
 mpsc（multi-producer, single-consumer）是异步通道，多个发送者，一个接收者：
 
@@ -344,13 +346,13 @@ async fn main() {
 ```
 
 有界通道的特性：
-- 发送时如果通道满，`send().await`会挂起等待
-- 接收时如果通道空，`recv().await`会挂起等待
-- 所有发送者drop后，recv返回None
+- 发送时如果通道满，`send().await` 会挂起等待
+- 接收时如果通道空，`recv().await` 会挂起等待
+- 所有发送者 drop 后，recv 返回 None
 
 无界通道（`mpsc::unbounded_channel`）：发送不会阻塞，但可能无限增长内存。
 
-### 3.2 oneshot与watch
+### 3.2 oneshot 与 watch
 
 **oneshot**：一次性通道，发送一个值：
 
@@ -373,7 +375,7 @@ async fn main() {
 }
 ```
 
-oneshot常用于：任务间传递一次性结果、取消信号、异步初始化通知。
+oneshot 常用于：任务间传递一次性结果、取消信号、异步初始化通知。
 
 **watch**：单值广播通道，接收者总是获取最新值：
 
@@ -402,11 +404,11 @@ async fn main() {
 }
 ```
 
-watch适用于：配置更新、状态广播、最新值通知（不需要历史值）。
+watch 适用于：配置更新、状态广播、最新值通知（不需要历史值）。
 
-### 3.3 异步Mutex/RwLock
+### 3.3 异步 Mutex/RwLock
 
-Tokio的异步锁与`std::sync::Mutex`的区别：lock是异步的，等待时不阻塞线程：
+Tokio 的异步锁与 `std::sync::Mutex` 的区别：lock 是异步的，等待时不阻塞线程：
 
 ```rust
 use tokio::sync::Mutex;
@@ -435,13 +437,13 @@ async fn main() {
 }
 ```
 
-**重要**：在异步代码中应该用`tokio::sync::Mutex`而不是`std::sync::Mutex`，因为`std::sync::Mutex::lock()`会阻塞线程，可能导致整个运行时的线程池被阻塞（所有任务都无法执行）。
+**重要**：在异步代码中应该用 `tokio::sync::Mutex` 而不是 `std::sync::Mutex`，因为 `std::sync::Mutex::lock()` 会阻塞线程，可能导致整个运行时的线程池被阻塞（所有任务都无法执行）。
 
-但如果锁的持有时间很短（微秒级），且不会在持有锁时await，`std::sync::Mutex`的性能更好（没有异步开销）。选择原则：
-- 持有锁期间有await → 用`tokio::sync::Mutex`
-- 持有锁期间无await，且锁竞争不激烈 → 用`std::sync::Mutex`
+但如果锁的持有时间很短（微秒级），且不会在持有锁时 await，`std::sync::Mutex` 的性能更好（没有异步开销）。选择原则：
+- 持有锁期间有 await → 用 `tokio::sync::Mutex`
+- 持有锁期间无 await，且锁竞争不激烈 → 用 `std::sync::Mutex`
 
-### 3.4 Notify与Barrier
+### 3.4 Notify 与 Barrier
 
 **Notify**：异步通知原语，一个或多个任务等待通知：
 
@@ -472,7 +474,7 @@ async fn main() {
 
 ### 4.1 select!宏
 
-`select!`同时等待多个Future，哪个先完成就执行哪个分支：
+`select!` 同时等待多个 Future，哪个先完成就执行哪个分支：
 
 ```rust
 use tokio::sync::mpsc;
@@ -508,10 +510,10 @@ async fn main() {
 ```
 
 select!的规则：
-- 第一个完成的分支被执行，其他分支被drop（取消）
+- 第一个完成的分支被执行，其他分支被 drop（取消）
 - 所有分支都必须返回相同类型（如果有返回值）
-- 默认随机选择分支（公平性），`biased`优先第一个分支
-- 可以用`else`分支处理所有Future都Pending的情况
+- 默认随机选择分支（公平性），`biased` 优先第一个分支
+- 可以用 `else` 分支处理所有 Future 都 Pending 的情况
 
 ### 4.2 超时与取消
 
@@ -539,7 +541,7 @@ async fn main() {
 }
 ```
 
-**取消语义**：Rust的Future取消是协作式的——drop Future就取消了。被取消的Future的drop会递归drop所有字段，释放资源。
+**取消语义**：Rust 的 Future 取消是协作式的——drop Future 就取消了。被取消的 Future 的 drop 会递归 drop 所有字段，释放资源。
 
 ```rust
 use tokio::time::{timeout, Duration};
@@ -568,37 +570,85 @@ async fn main() {
 ```
 
 取消的注意事项：
-- **协作式取消**：Future只能在`.await`点被取消，正在执行的同步代码不会被中断
-- **资源清理**：drop会自动清理，但如果有`spawn`的子任务，子任务不会自动取消（需要abort）
-- **半取消状态**：如果Future在修改数据的中间被取消，数据可能处于不一致状态，需要在设计时考虑
+- **协作式取消**：Future 只能在 `.await` 点被取消，正在执行的同步代码不会被中断
+- **资源清理**：drop 会自动清理，但如果有 `spawn` 的子任务，子任务不会自动取消（需要 abort）
+- **半取消状态**：如果 Future 在修改数据的中间被取消，数据可能处于不一致状态，需要在设计时考虑
 
-## 5. async-std与smol对比
+## 5. async-std 与 smol 对比
 
 | 特性 | Tokio | async-std | smol |
 |------|-------|-----------|------|
-| 调度器 | work-stealing多线程 | work-stealing多线程 | 可插拔（默认单线程） |
+| 调度器 | work-stealing 多线程 | work-stealing 多线程 | 可插拔（默认单线程） |
 | 生态成熟度 | 最高 | 中等 | 较低 |
 | 二进制体积 | 较大 | 中等 | 小 |
 | 企业采用 | 最广泛（AWS、Cloudflare） | 较少 | 较少 |
 
-async-std设计目标是"像std一样的异步API"，smol是极简运行时可嵌入任何应用。Tokio是事实标准，除非有特殊需求（极小体积、特定API风格），否则推荐Tokio。
+async-std 设计目标是"像 std 一样的异步 API"，smol 是极简运行时可嵌入任何应用。Tokio 是事实标准，除非有特殊需求（极小体积、特定 API 风格），否则推荐 Tokio。
 
 ## 6. 运行时选型
 
-选型决策：网络服务/高并发→Tokio（生态最成熟，性能最优）；嵌入式/资源受限→smol（体积小）；偏好std风格API→async-std。Tokio是事实标准，除非有特殊需求否则推荐Tokio。
+选型决策：网络服务/高并发→Tokio（生态最成熟，性能最优）；嵌入式/资源受限→smol（体积小）；偏好 std 风格 API→async-std。Tokio 是事实标准，除非有特殊需求否则推荐 Tokio。
 
-最佳实践：不要嵌套运行时、不要在异步代码中阻塞（用`spawn_blocking`）、持有锁期间await用异步锁、合理设置worker线程数、使用有界通道做backpressure。
+最佳实践：不要嵌套运行时、不要在异步代码中阻塞（用 `spawn_blocking`）、持有锁期间 await 用异步锁、合理设置 worker 线程数、使用有界通道做 backpressure。
 
-## 7. 本节小结
+## 7. 快速参考卡片
 
-- **Tokio运行时**：`#[tokio::main]`宏创建运行时，`block_on`阻塞执行Future，`spawn`创建并发任务。多线程运行时使用work-stealing调度器，空闲线程从繁忙线程偷任务，实现负载均衡。
-- **异步IO**：`TcpListener::accept().await`在等待连接时挂起任务，不阻塞线程。Tokio在Linux上用epoll/io_uring实现Reactor模式，IO事件就绪后通过Waker唤醒任务。交叉引用《../../01-C++技术体系/03-网络编程/02-IO多路复用与Reactor模型.md》。
-- **tokio::sync**：mpsc通道（多生产者单消费者，有界/无界）、oneshot（一次性通知）、watch（最新值广播）、异步Mutex/RwLock（lock是异步的）、Notify（任务通知）。异步锁用于持有锁期间有await的场景。
-- **select!**：同时等待多个Future，先完成的执行，其他取消。`timeout`实现超时，超时后Future被drop取消。Rust的取消是协作式的，只能在await点取消。
-- **async-std/smol**：async-std提供std风格API，smol是极简运行时。Tokio是事实标准，生态最成熟、性能最优、企业采用最广泛。
-- 选型：网络服务用Tokio，资源受限用smol，偏好std风格用async-std。最佳实践：不嵌套运行时、不阻塞异步线程、合理选锁、使用backpressure。
+| 查询点 | 速答 |
+| --- | --- |
+| 入口 | `#[tokio::main]`（默认多线程 runtime）；手工 `Runtime::new()?.block_on(fut)` |
+| spawn | `tokio::spawn(async {...})` 要求 `Send + 'static`，返回 `JoinHandle`；`spawn_local` 用于 `!Send` |
+| 运行时形态 | `multi_thread`（work-stealing，默认）/`current_thread`（单线程，测试友好） |
+| Reactor | `TcpListener`/`AsyncRead`/`AsyncWrite` 背后是 epoll/kqueue/IOCP，与 C++ Reactor 同源 |
+| mpsc | `mpsc::channel(n)` 有界通道，`tx.send().await` 提供背压；`rx.recv().await` 返回 `Option` |
+| oneshot/watch | 请求-应答一次（oneshot）/ 状态广播（watch，`borrow()` 读最新） |
+| 异步同步原语 | `tokio::sync::{Mutex, RwLock, Semaphore, Notify, Barrier}` |
+| select! | 多 Future 竞速；未完成分支被 drop（注意取消安全） |
+| 超时取消 | `tokio::time::timeout(dur, fut)` 返回 `Result<T, Elapsed>`，超时即取消 |
+| 选型 | tokio（生态最全、生产首选）/ async-std（类 std）/ smol（轻量、库友好） |
 
 ---
 
-上一篇：《03-Future状态机与async原理.md》
-下一篇：《05-并发架构模式.md》
+## 8. 常见坑
+
+### 坑 1：在 async 中跨 `await` 持有 `std::sync::MutexGuard`
+
+见前两篇同类坑：会导致 Future 不 `Send`，`tokio::spawn` 编译失败。异步共享状态用 `tokio::sync::Mutex`，或把临界区收缩到不含 await。
+
+### 坑 2：任务里跑重 CPU 计算
+
+一个 `for _ in 0..10_000_000 {}` 就会占住 worker 线程，其它任务全部延迟（表现为"偶发超时"）。用 `spawn_blocking`、专用 rayon 线程池，或分片 `yield_now().await`。
+
+### 坑 3：嵌套运行时
+
+在 runtime 内再 `block_on` 会 panic：*Cannot start a runtime from within a runtime*。库代码不要创建 runtime，只提供 async 函数；需要同步接口时用 `Handle::current().block_on` 之外的手段（如 `block_in_place`）。
+
+### 坑 4：spawn 出去的任务错误被吞掉
+
+`tokio::spawn` 的返回 `JoinHandle` 一旦被丢弃，任务 panic 只打印到 stderr，调用方完全不知情。要点：保留 JoinHandle 并 `.await` 收口，或用 `JoinSet` 统一收集结果。
+
+### 坑 5：select! 分支不取消安全
+
+`select!` 未完成的分支会被 drop。若分支内含"发送一半状态"的逻辑（如 `read_exact` 读到一半），取消后数据丢失。对策：把不取消安全的操作放进 `spawn` 后的 JoinHandle，或用 `biased;` 固定优先级。
+
+### 坑 6：无界通道当默认选择
+
+`mpsc::unbounded_channel()` 在生产者快于消费者时会无限吃内存。默认用有界通道 `mpsc::channel(n)`，让 `send().await` 自然形成背压。
+
+### 坑 7：混用 `std::thread::sleep` 与 `tokio::time::sleep`
+
+前者阻塞线程（含 executor worker），后者挂起任务让出线程。异步代码里只应出现 `tokio::time::*`。
+
+---
+
+## 9. 本节小结
+
+- **Tokio 运行时**：`#[tokio::main]` 宏创建运行时，`block_on` 阻塞执行 Future，`spawn` 创建并发任务。多线程运行时使用 work-stealing 调度器，空闲线程从繁忙线程偷任务，实现负载均衡。
+- **异步 IO**：`TcpListener::accept().await` 在等待连接时挂起任务，不阻塞线程。Tokio 在 Linux 上用 epoll/io_uring 实现 Reactor 模式，IO 事件就绪后通过 Waker 唤醒任务。交叉引用《../../01-C++技术体系/03-网络编程/02-IO多路复用与Reactor模型.md》。
+- **tokio::sync**：mpsc 通道（多生产者单消费者，有界/无界）、oneshot（一次性通知）、watch（最新值广播）、异步 Mutex/RwLock（lock 是异步的）、Notify（任务通知）。异步锁用于持有锁期间有 await 的场景。
+- **select!**：同时等待多个 Future，先完成的执行，其他取消。`timeout` 实现超时，超时后 Future 被 drop 取消。Rust 的取消是协作式的，只能在 await 点取消。
+- **async-std/smol**：async-std 提供 std 风格 API，smol 是极简运行时。Tokio 是事实标准，生态最成熟、性能最优、企业采用最广泛。
+- 选型：网络服务用 Tokio，资源受限用 smol，偏好 std 风格用 async-std。最佳实践：不嵌套运行时、不阻塞异步线程、合理选锁、使用 backpressure。
+
+---
+
+上一篇：《03-Future状态机与async原理.md》　｜　下一篇：《05-并发架构模式.md》　｜　模块索引：《../README.md》

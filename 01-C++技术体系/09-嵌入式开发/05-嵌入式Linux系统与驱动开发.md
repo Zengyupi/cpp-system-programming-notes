@@ -21,6 +21,8 @@
   - [3.2 I2C / SPI 子系统驱动编写](#32-i2c--spi-子系统驱动编写)
   - [3.3 中断下半部：workqueue 与 tasklet](#33-中断下半部workqueue-与-tasklet)
   - [3.4 内核模块编写与加载](#34-内核模块编写与加载)
+- [4. 快速参考卡片](#4-快速参考卡片)
+- [5. 常见坑](#5-常见坑)
 
 ---
 
@@ -597,5 +599,57 @@ dmesg -w
 
 ---
 
-上一篇：《04-中断系统与RTOS原理.md》
-下一篇：《06-低功耗可靠性与OTA升级.md》
+## 4. 快速参考卡片
+
+### 启动链速查
+
+```text
+BootROM(固化) → SPL(初始化DDR) → U-Boot(加载zImage+dtb+rootfs) → 内核 → init(systemd/busybox)
+```
+
+### Flash 文件系统选型
+
+| 介质/场景 | 选 |
+| --- | --- |
+| SD/eMMC 数据交换 | FAT32/exFAT |
+| SD/eMMC Linux 数据盘 | ext4 |
+| 只读系统分区 | SquashFS |
+| MCU 裸 SPI Flash | LittleFS |
+| Linux 小容量 NOR | JFFS2 |
+| Linux 大容量 NAND | UBIFS（UBI 层） |
+
+### 驱动框架选型
+
+| 外设 | 框架 | 匹配 |
+| --- | --- | --- |
+| 片上无总线外设（UART/定时器控制器） | platform_driver | `compatible` |
+| I2C 从机芯片 | i2c_driver + `i2c_smbus_*` | `compatible`/id_table |
+| SPI 从机芯片 | spi_driver + `spi_sync` | `compatible`/id_table |
+| 中断需睡眠处理 | workqueue（进程上下文） | — |
+| 中断纯原子处理 | tasklet/softirq | — |
+
+### 模块命令速查
+
+```bash
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- KDIR=<linux>   # 交叉编译
+insmod/rmmod/modprobe/my_lsmod/modinfo/dmesg -w                # 加载/查看/日志
+```
+
+---
+
+## 5. 常见坑
+
+1. **驱动与设备树 compatible 对不上**：`compatible` 字符串必须逐字一致，否则不 probe；`/proc/device-tree/`、`dmesg`、`ls /sys/bus/platform/devices` 可排查。
+2. **内核/用户态指针直接解引用**：内核不能直接访问用户态地址，必须 `copy_to_user/copy_from_user` 并检查返回值。
+3. **vermagic 不匹配**：模块与目标内核版本/编译器/SMP 配置不一致时 `insmod` 报 Invalid module format；必须用目标内核源码树交叉编译。
+4. **中断底半部里睡眠**：hardirq/tasklet/softirq 上下文不能睡眠、不能调可能阻塞的函数；需要睡眠（如 I2C 读寄存器）一律放 workqueue。
+5. **内核栈溢出**：内核栈仅 8KB/16KB，大局部数组、深递归、`printk` 大缓冲都会撑爆；大数据用动态分配。
+6. **漏用 devm_ 导致资源泄漏**：`devm_` 系列在 remove/probe 失败时自动释放；手动 `ioremap`/`request_irq` 要成对清理，易漏。
+7. **NAND 上用 JFFS2 挂载慢/UBI 参数错**：大容量 NAND 应用 UBIFS；`mkfs.ubifs` 的 `-m/-e/-c` 必须与 NAND 页大小/逻辑块大小一致，否则挂载失败。
+8. **掉电损坏文件系统**：FAT32 无掉电保护，频繁写配置的场景掉电易坏块；MCU 侧选 LittleFS（CoW+CRC），Linux 侧选 UBIFS。
+9. **rootfs 只读却要写**：把 SquashFS 当可写分区用会失败；系统分区只读 SquashFS + 可写数据分区分离，配置/日志挂到数据分区。
+10. **时钟/引脚复用漏配**：dts 里 `clocks`/`pinctrl-0` 没配，外设不工作或引脚不对；这是板级 bring-up 最常见的坑。
+
+---
+
+上一篇：《04-中断系统与RTOS原理.md》　｜　下一篇：《06-低功耗可靠性与OTA升级.md》　｜　模块索引：《../README.md》

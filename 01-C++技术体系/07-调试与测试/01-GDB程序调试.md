@@ -28,6 +28,7 @@
   - [11.2 分析步骤](#112-分析步骤)
 - [12. 常用组合速查表](#12-常用组合速查表)
 - [13. 快速参考卡片](#13-快速参考卡片)
+- [14. 常见坑与易错点](#14-常见坑与易错点)
 
 ---
 
@@ -403,4 +404,16 @@ gcc -g -O0 program.c -o program
 
 ---
 
-下一篇：《02-Valgrind内存检测.md》
+## 14. 常见坑与易错点
+
+| 现象 | 根因 | 对策 |
+|---|---|---|
+| `bt` 全是 `??`，或 `p var` 报 No symbol "var" in current context | 编译时漏加 `-g`，可执行文件不带调试信息（或跑的是 strip 后的发布版） | 编译加 `-g`（调试建议 `-g -O0`），确认调试用的是带符号的二进制而非发布版 |
+| `p x` 显示 `<optimized out>`，或 `list` 行号与源码对不上、单步乱跳 | `-O2` 等优化把变量优化掉、指令重排/内联，行号表失真 | 调试用 `-O0`（或 `-Og`）重编；必须在优化版上查时改用看汇编/寄存器，勿轻信源码行号 |
+| `attach <pid>` 报 `ptrace: Operation not permitted` | Linux Yama 默认 `ptrace_scope=1`，只允许调试子进程 | 临时 `sudo gdb -p <pid>`；或 `echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope`；长期用 gdbserver 远程附加 |
+| 任意线程一命中断点所有线程都停；`step` 时其他线程仍在跑导致状态抖动 | GDB 默认暂停所有线程，非当前线程事件照常推进 | 单线程聚焦时 `set scheduler-locking on`（只跑当前线程），单步场景用 `step` 模式，看完恢复 `off`；看现场用 `thread apply all bt` |
+| 程序崩溃后目录里找不到 core 文件 | `ulimit -c` 默认 0（不生成）；或 `core_pattern` 指向 systemd-coredump 管道/无写权限目录 | `ulimit -c unlimited`（临时）并写进 limits.conf；`cat /proc/sys/kernel/core_pattern` 确认落点，必要时 `echo "core.%p" > /proc/sys/kernel/core_pattern` 指回工作目录 |
+
+---
+
+下一篇：《02-Valgrind内存检测.md》　｜　模块索引：《../README.md》

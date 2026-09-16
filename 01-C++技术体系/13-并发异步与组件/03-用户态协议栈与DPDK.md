@@ -691,5 +691,4 @@ ET 的回调细节：`ep_poll_callback` 里判断 `ring_empty_before && !ring_em
 
 ---
 
-上一篇：《02-io_uring与异步IO.md》
-下一篇：《04-内存池与池化技术.md》
+上一篇：《02-io_uring与异步IO.md》　｜　下一篇：《04-内存池与池化技术.md》　｜　模块索引：《../README.md》

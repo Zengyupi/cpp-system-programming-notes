@@ -1,34 +1,35 @@
-# 线程模型与Send-Sync
+# 线程模型与 Send-Sync
 
-> 本节目标：掌握std::thread的创建与JoinHandle、thread::scope作用域线程、move闭包的所有权转移机制，深入理解Send/Sync两个标记trait如何在编译期消灭数据竞争，掌握手动实现Send/Sync的规则与线程局部存储，能够对照C++的std::thread进行迁移。
+> 本节目标：掌握 std::thread 的创建与 JoinHandle、thread::scope 作用域线程、move 闭包的所有权转移机制，深入理解 Send/Sync 两个标记 trait 如何在编译期消灭数据竞争，掌握手动实现 Send/Sync 的规则与线程局部存储，能够对照 C++的 std::thread 进行迁移。
 
 ## 本章速览
 
-- [1. std::thread与JoinHandle](#1-stdthread与joinhandle)
+- [1. std::thread 与 JoinHandle](#1-stdthread-与-joinhandle)
   - [1.1 创建线程与等待结束](#11-创建线程与等待结束)
-  - [1.2 move闭包与所有权转移](#12-move闭包与所有权转移)
+  - [1.2 move 闭包与所有权转移](#12-move-闭包与所有权转移)
   - [1.3 线程命名与栈大小](#13-线程命名与栈大小)
-- [2. thread::scope作用域线程](#2-threadscope作用域线程)
-  - [2.1 为什么需要scope](#21-为什么需要scope)
-  - [2.2 scope API与借用](#22-scope-api与借用)
-- [3. Send与Sync：编译期数据竞争防护](#3-send与sync编译期数据竞争防护)
+- [2. thread::scope 作用域线程](#2-threadscope-作用域线程)
+  - [2.1 为什么需要 scope](#21-为什么需要-scope)
+  - [2.2 scope API 与借用](#22-scope-api-与借用)
+- [3. Send 与 Sync：编译期数据竞争防护](#3-send-与-sync编译期数据竞争防护)
   - [3.1 Send：可跨线程转移所有权](#31-send可跨线程转移所有权)
   - [3.2 Sync：可跨线程共享引用](#32-sync可跨线程共享引用)
-  - [3.3 Send/Sync的自动推导](#33-sendsync的自动推导)
-  - [3.4 手动实现Send/Sync的规则](#34-手动实现sendsync的规则)
+  - [3.3 Send/Sync 的自动推导](#33-sendsync-的自动推导)
+  - [3.4 手动实现 Send/Sync 的规则](#34-手动实现-sendsync-的规则)
 - [4. 线程局部存储](#4-线程局部存储)
   - [4.1 thread_local!宏](#41-thread_local宏)
-  - [4.2 对比C++thread_local](#42-对比cthread_local)
-- [5. 常见陷阱](#5-常见陷阱)
-  - [陷阱1：忘记join导致主线程提前退出](#陷阱1忘记join导致主线程提前退出)
-  - [陷阱2：Rc跨线程](#陷阱2rc跨线程)
-  - [陷阱3：&mut跨线程共享](#陷阱3mut跨线程共享)
-  - [陷阱4：手动实现Send/Sync但实际不安全](#陷阱4手动实现sendsync但实际不安全)
-- [6. 本节小结](#6-本节小结)
+  - [4.2 对比 C++thread_local](#42-对比-cthread_local)
+- [5. 快速参考卡片](#5-快速参考卡片)
+- [6. 常见陷阱](#6-常见陷阱)
+  - [陷阱 1：忘记 join 导致主线程提前退出](#陷阱-1忘记-join-导致主线程提前退出)
+  - [陷阱 2：Rc 跨线程](#陷阱-2rc-跨线程)
+  - [陷阱 3：&mut 跨线程共享](#陷阱-3mut-跨线程共享)
+  - [陷阱 4：手动实现 Send/Sync 但实际不安全](#陷阱-4手动实现-sendsync-但实际不安全)
+- [7. 本节小结](#7-本节小结)
 
 ---
 
-## 1. std::thread与JoinHandle
+## 1. std::thread 与 JoinHandle
 
 ### 1.1 创建线程与等待结束
 
@@ -56,7 +57,7 @@ fn main() {
 }
 ```
 
-`JoinHandle<T>`中的`T`是闭包返回值的类型。`join()`返回`Result<T, Box<dyn Any + Send>>`，如果子线程panic，`join()`返回`Err`。
+`JoinHandle<T>` 中的 `T` 是闭包返回值的类型。`join()` 返回 `Result<T, Box<dyn Any + Send>>`，如果子线程 panic，`join()` 返回 `Err`。
 
 ```rust
 use std::thread;
@@ -83,9 +84,9 @@ fn main() {
 }
 ```
 
-### 1.2 move闭包与所有权转移
+### 1.2 move 闭包与所有权转移
 
-`thread::spawn`要求闭包是`'static`的（不引用局部变量），因为线程可能比创建它的作用域活得更久。使用`move`关键字将环境变量的所有权转移进线程：
+`thread::spawn` 要求闭包是 `'static` 的（不引用局部变量），因为线程可能比创建它的作用域活得更久。使用 `move` 关键字将环境变量的所有权转移进线程：
 
 ```rust
 use std::thread;
@@ -121,7 +122,7 @@ fn main() {
 }
 ```
 
-对照C++：C++的`std::thread`也需要注意对象生命周期，但C++没有编译期检查。C++中可以意外地将引用传入线程而导致悬空引用，Rust的`'static`约束在编译期阻止了这种错误。
+对照 C++：C++的 `std::thread` 也需要注意对象生命周期，但 C++没有编译期检查。C++中可以意外地将引用传入线程而导致悬空引用，Rust 的 `'static` 约束在编译期阻止了这种错误。
 
 ```cpp
 // C++中的经典bug：引用悬空
@@ -165,11 +166,11 @@ fn main() {
 }
 ```
 
-## 2. thread::scope作用域线程
+## 2. thread::scope 作用域线程
 
-### 2.1 为什么需要scope
+### 2.1 为什么需要 scope
 
-`thread::spawn`要求`'static`，意味着不能借用局部变量。但有时需要多个线程共享局部数据，且保证所有线程在局部变量销毁前结束。`thread::scope`提供了这种能力。
+`thread::spawn` 要求 `'static`，意味着不能借用局部变量。但有时需要多个线程共享局部数据，且保证所有线程在局部变量销毁前结束。`thread::scope` 提供了这种能力。
 
 ```rust
 use std::thread;
@@ -203,9 +204,9 @@ fn main() {
 }
 ```
 
-### 2.2 scope API与借用
+### 2.2 scope API 与借用
 
-`thread::scope`的核心保证：**scope块结束时，所有spawn的线程都已join**。这意味着借用的局部变量一定在线程结束后才销毁。
+`thread::scope` 的核心保证：**scope 块结束时，所有 spawn 的线程都已 join**。这意味着借用的局部变量一定在线程结束后才销毁。
 
 ```rust
 use std::thread;
@@ -240,15 +241,15 @@ fn main() {
 }
 ```
 
-交叉引用：C++中没有scope线程的直接对应，需要手动管理join或使用`std::jthread`（C++20）。详细的C++线程模型见《../../01-C++技术体系/04-并发编程/01-线程基础与生命周期.md》。
+交叉引用：C++中没有 scope 线程的直接对应，需要手动管理 join 或使用 `std::jthread`（C++20）。详细的 C++线程模型见《../../01-C++技术体系/04-并发编程/01-线程基础与生命周期.md》。
 
-## 3. Send与Sync：编译期数据竞争防护
+## 3. Send 与 Sync：编译期数据竞争防护
 
-Send和Sync是Rust并发安全的基石。它们是**标记trait**（marker trait），没有方法，但编译器会自动推导并在编译期检查。
+Send 和 Sync 是 Rust 并发安全的基石。它们是**标记 trait**（marker trait），没有方法，但编译器会自动推导并在编译期检查。
 
 ### 3.1 Send：可跨线程转移所有权
 
-`Send`标记表示：**这个类型的所有权可以安全地从一个线程转移到另一个线程**。
+`Send` 标记表示：**这个类型的所有权可以安全地从一个线程转移到另一个线程**。
 
 ```rust
 use std::thread;
@@ -277,11 +278,11 @@ fn main() {
 }
 ```
 
-`Rc<T>`不是Send的原因：它的引用计数是普通整数（非原子），如果两个线程同时clone/drop，会导致数据竞争和引用计数错误。
+`Rc<T>` 不是 Send 的原因：它的引用计数是普通整数（非原子），如果两个线程同时 clone/drop，会导致数据竞争和引用计数错误。
 
 ### 3.2 Sync：可跨线程共享引用
 
-`Sync`标记表示：**这个类型的不可变引用（&T）可以安全地在多个线程间共享**。
+`Sync` 标记表示：**这个类型的不可变引用（&T）可以安全地在多个线程间共享**。
 
 ```rust
 use std::thread;
@@ -318,29 +319,29 @@ fn main() {
 }
 ```
 
-`RefCell<T>`不是Sync的原因：它的借用计数是普通整数，且`borrow_mut`可以通过`&RefCell`修改内部值。如果多个线程同时共享`&RefCell`并调用`borrow_mut`，会导致数据竞争。
+`RefCell<T>` 不是 Sync 的原因：它的借用计数是普通整数，且 `borrow_mut` 可以通过 `&RefCell` 修改内部值。如果多个线程同时共享 `&RefCell` 并调用 `borrow_mut`，会导致数据竞争。
 
-Send与Sync的关系：
+Send 与 Sync 的关系：
 
 | 类型 | Send | Sync | 说明 |
 |------|------|------|------|
 | `i32`, `String`, `Vec<T>` | 是 | 是 | 普通拥有所有权的类型 |
-| `&T` (当T: Sync) | 是 | 是 | 不可变引用可跨线程共享和转移 |
-| `&mut T` (当T: Send) | 是 | 否 | 可变引用可转移但不能共享（排他性） |
+| `&T` (当 T: Sync) | 是 | 是 | 不可变引用可跨线程共享和转移 |
+| `&mut T` (当 T: Send) | 是 | 否 | 可变引用可转移但不能共享（排他性） |
 | `Rc<T>` | 否 | 否 | 非原子引用计数 |
-| `Arc<T>` (当T: Send+Sync) | 是 | 是 | 原子引用计数 |
-| `Cell<T>` (当T: Send) | 是 | 否 | 内部可变性，非线程安全 |
-| `RefCell<T>` (当T: Send) | 是 | 否 | 运行时借用检查，非线程安全 |
-| `Mutex<T>` (当T: Send) | 是 | 是 | 锁保护内部可变性 |
-| `RwLock<T>` (当T: Send+Sync) | 是 | 是 | 读写锁 |
-| `AtomicI32`等 | 是 | 是 | 原子类型 |
-| 裸指针`*const T`/`*mut T` | 否 | 否 | 需要unsafe手动实现 |
+| `Arc<T>` (当 T: Send+Sync) | 是 | 是 | 原子引用计数 |
+| `Cell<T>` (当 T: Send) | 是 | 否 | 内部可变性，非线程安全 |
+| `RefCell<T>` (当 T: Send) | 是 | 否 | 运行时借用检查，非线程安全 |
+| `Mutex<T>` (当 T: Send) | 是 | 是 | 锁保护内部可变性 |
+| `RwLock<T>` (当 T: Send+Sync) | 是 | 是 | 读写锁 |
+| `AtomicI32` 等 | 是 | 是 | 原子类型 |
+| 裸指针 `*const T`/`*mut T` | 否 | 否 | 需要 unsafe 手动实现 |
 
-### 3.3 Send/Sync的自动推导
+### 3.3 Send/Sync 的自动推导
 
-编译器自动为类型推导Send和Sync：
-- 如果一个类型的所有字段都是Send，那么这个类型是Send
-- 如果一个类型的所有字段都是Sync，那么这个类型是Sync
+编译器自动为类型推导 Send 和 Sync：
+- 如果一个类型的所有字段都是 Send，那么这个类型是 Send
+- 如果一个类型的所有字段都是 Sync，那么这个类型是 Sync
 
 ```rust
 // 自动推导：MyStruct的字段都是Send+Sync，所以MyStruct也是Send+Sync
@@ -357,9 +358,9 @@ struct UnsafeWrapper {
 // UnsafeWrapper不是Send也不是Sync，需要手动实现
 ```
 
-### 3.4 手动实现Send/Sync的规则
+### 3.4 手动实现 Send/Sync 的规则
 
-当类型包含裸指针或其他`!Send`/`!Sync`的字段，但实际上是线程安全的时，需要手动实现：
+当类型包含裸指针或其他 `!Send`/`!Sync` 的字段，但实际上是线程安全的时，需要手动实现：
 
 ```rust
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -408,12 +409,12 @@ impl<T> Drop for AtomicOption<T> {
 }
 ```
 
-手动实现Send/Sync的安全要求：
-- **实现Send**：必须保证类型的值在跨线程转移后，不会出现数据竞争。通常需要内部使用原子操作或锁保护。
-- **实现Sync**：必须保证多个线程同时持有`&T`时，不会出现数据竞争。这比Send更严格，因为`&T`是共享的。
-- 使用`unsafe impl`声明，因为编译器无法验证安全性，需要程序员承诺。
+手动实现 Send/Sync 的安全要求：
+- **实现 Send**：必须保证类型的值在跨线程转移后，不会出现数据竞争。通常需要内部使用原子操作或锁保护。
+- **实现 Sync**：必须保证多个线程同时持有 `&T` 时，不会出现数据竞争。这比 Send 更严格，因为 `&T` 是共享的。
+- 使用 `unsafe impl` 声明，因为编译器无法验证安全性，需要程序员承诺。
 
-对照C++：C++没有Send/Sync概念，线程安全完全是文档约定。一个C++类是否线程安全，需要看文档或源码，编译器不做任何检查。Rust把"线程安全"变成了类型系统的一部分，在编译期强制保证。
+对照 C++：C++没有 Send/Sync 概念，线程安全完全是文档约定。一个 C++类是否线程安全，需要看文档或源码，编译器不做任何检查。Rust 把"线程安全"变成了类型系统的一部分，在编译期强制保证。
 
 ## 4. 线程局部存储
 
@@ -458,11 +459,11 @@ fn main() {
 }
 ```
 
-`thread_local!`的特点：
+`thread_local!` 的特点：
 - 每个线程有独立的副本
 - 首次访问时初始化（惰性初始化）
-- 线程结束时自动drop
-- 使用`with`方法访问，因为TLS变量的地址可能不稳定
+- 线程结束时自动 drop
+- 使用 `with` 方法访问，因为 TLS 变量的地址可能不稳定
 
 更复杂的例子：线程局部的连接池
 
@@ -495,22 +496,41 @@ fn return_connection(conn: Connection) {
 }
 ```
 
-### 4.2 对比C++thread_local
+### 4.2 对比 C++thread_local
 
 | 特性 | Rust `thread_local!` | C++ `thread_local` |
 |------|----------------------|---------------------|
 | 初始化 | 惰性（首次访问时） | 静态初始化期或首次使用 |
-| 析构 | 线程结束时自动drop | 线程结束时自动析构 |
-| 访问方式 | `.with()`闭包 | 直接访问变量名 |
-| 可变状态 | 需要`Cell`/`RefCell` | 直接可变 |
+| 析构 | 线程结束时自动 drop | 线程结束时自动析构 |
+| 访问方式 | `.with()` 闭包 | 直接访问变量名 |
+| 可变状态 | 需要 `Cell`/`RefCell` | 直接可变 |
 | 初始化顺序 | 每个变量独立 | 可能有初始化顺序问题 |
 | 跨平台 | 稳定 | 平台相关（某些平台有限制） |
 
-C++的`thread_local`可以直接修改变量，Rust需要`Cell`/`RefCell`是因为Rust的`static`变量默认是不可变的，需要内部可变性容器。
+C++的 `thread_local` 可以直接修改变量，Rust 需要 `Cell`/`RefCell` 是因为 Rust 的 `static` 变量默认是不可变的，需要内部可变性容器。
 
-## 5. 常见陷阱
+## 5. 快速参考卡片
 
-### 陷阱1：忘记join导致主线程提前退出
+| 查询点 | 速答 |
+| --- | --- |
+| 创建线程 | `thread::spawn(move \|\| { ... })` 返回 `JoinHandle<T>`；`.join()` 阻塞并拿到 `Result<T, Box<dyn Any>>` |
+| 为什么要 move | 新线程生命周期不确定，借用栈上数据编译不过；`move` 把所有权搬进去 |
+| 作用域线程 | `thread::scope(\|s\| { s.spawn(\|\| use(&local)); })`：可借用局部变量，作用域结束自动 join |
+| Send | 所有权可跨线程转移：`i32` ✓、`String` ✓、`Rc` ✗、`*mut T` ✗ |
+| Sync | `&T` 可跨线程共享：`Mutex<T>` ✓、`RefCell<T>` ✗、`Cell<T>` ✗ |
+| 自动推导 | 按字段递归推导；`Rc` 非 Send/Sync、`Arc<Mutex<T>>` 全满足、`Rc<RefCell<T>>` 全不满足 |
+| 手动 impl | 只能 `unsafe impl Send/Sync`，需自行论证不变量；写错即 UB |
+| 线程局部 | `thread_local! { static C: RefCell<u32> = RefCell::new(0); }`，每线程独立实例 |
+| Builder 配置 | `thread::Builder::new().name("w1").stack_size(4 * 1024 * 1024).spawn(f)` |
+| 选型 | CPU 密集线程数≈核数；IO 密集改用异步 |
+
+交叉引用：C++ 线程基础见《../../01-C++技术体系/04-并发编程/01-线程基础与生命周期.md》。
+
+---
+
+## 6. 常见陷阱
+
+### 陷阱 1：忘记 join 导致主线程提前退出
 
 ```rust
 use std::thread;
@@ -526,7 +546,7 @@ fn main() {
 }
 ```
 
-### 陷阱2：Rc跨线程
+### 陷阱 2：Rc 跨线程
 
 ```rust
 use std::rc::Rc;
@@ -544,7 +564,7 @@ fn main() {
 }
 ```
 
-### 陷阱3：&mut跨线程共享
+### 陷阱 3：&mut 跨线程共享
 
 ```rust
 use std::thread;
@@ -570,7 +590,7 @@ fn main() {
 }
 ```
 
-### 陷阱4：手动实现Send/Sync但实际不安全
+### 陷阱 4：手动实现 Send/Sync 但实际不安全
 
 ```rust
 // 危险：手动实现Sync但内部有数据竞争
@@ -587,20 +607,20 @@ struct SafeCounter {
 // SafeCounter自动是Send + Sync，不需要手动实现
 ```
 
-## 6. 本节小结
+## 7. 本节小结
 
-- **std::thread**：`spawn`创建线程返回`JoinHandle<T>`，`join`等待结束并获取返回值或panic信息。`Builder`支持线程命名和栈大小配置。
-- **move闭包**：`thread::spawn`要求`'static`，用`move`转移所有权。C++中可以意外传入悬空引用，Rust的`'static`约束在编译期阻止。
-- **thread::scope**：作用域线程允许借用局部变量，scope结束时自动join所有线程。适合并行计算等短期线程场景，避免了`Arc`的开销。
-- **Send**：标记类型可安全跨线程转移所有权。`Rc<T>`不是Send（非原子引用计数），`Arc<T>`是Send。
-- **Sync**：标记类型的`&T`可安全跨线程共享。`RefCell<T>`不是Sync（运行时借用检查非线程安全），`Mutex<T>`是Sync。
-- **自动推导**：所有字段Send⇒类型Send，所有字段Sync⇒类型Sync。裸指针自动为`!Send + !Sync`。
-- **手动实现**：`unsafe impl Send/Sync`需要程序员承诺线程安全性。实现Sync比Send更严格。
-- **线程局部存储**：`thread_local!`宏为每个线程提供独立副本，惰性初始化，线程结束自动drop。需要`Cell`/`RefCell`提供内部可变性。
-- 常见陷阱：忘记join、Rc跨线程、&mut共享、不安全的手动Send/Sync实现。
+- **std::thread**：`spawn` 创建线程返回 `JoinHandle<T>`，`join` 等待结束并获取返回值或 panic 信息。`Builder` 支持线程命名和栈大小配置。
+- **move 闭包**：`thread::spawn` 要求 `'static`，用 `move` 转移所有权。C++中可以意外传入悬空引用，Rust 的 `'static` 约束在编译期阻止。
+- **thread::scope**：作用域线程允许借用局部变量，scope 结束时自动 join 所有线程。适合并行计算等短期线程场景，避免了 `Arc` 的开销。
+- **Send**：标记类型可安全跨线程转移所有权。`Rc<T>` 不是 Send（非原子引用计数），`Arc<T>` 是 Send。
+- **Sync**：标记类型的 `&T` 可安全跨线程共享。`RefCell<T>` 不是 Sync（运行时借用检查非线程安全），`Mutex<T>` 是 Sync。
+- **自动推导**：所有字段 Send⇒类型 Send，所有字段 Sync⇒类型 Sync。裸指针自动为 `!Send + !Sync`。
+- **手动实现**：`unsafe impl Send/Sync` 需要程序员承诺线程安全性。实现 Sync 比 Send 更严格。
+- **线程局部存储**：`thread_local!` 宏为每个线程提供独立副本，惰性初始化，线程结束自动 drop。需要 `Cell`/`RefCell` 提供内部可变性。
+- 常见陷阱：忘记 join、Rc 跨线程、&mut 共享、不安全的手动 Send/Sync 实现。
 
-交叉引用：C++线程基础与生命周期详见《../../01-C++技术体系/04-并发编程/01-线程基础与生命周期.md》；锁与死锁的Rust解决方案见下一篇《02-锁原子与无锁结构.md》。
+交叉引用：C++线程基础与生命周期详见《../../01-C++技术体系/04-并发编程/01-线程基础与生命周期.md》；锁与死锁的 Rust 解决方案见下一篇《02-锁原子与无锁结构.md》。
 
 ---
 
-下一篇：《02-锁原子与无锁结构.md》
+下一篇：《02-锁原子与无锁结构.md》　｜　模块索引：《../README.md》
